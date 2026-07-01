@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ModelProvider } from "@/lib/types/config";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
 	ApiStructureFormFragment,
 	BetaHeadersFormFragment,
@@ -28,47 +29,48 @@ const availableTabs = (hasCustomProviderConfig: boolean, hasGovernanceAccess: bo
 	if (hasCustomProviderConfig) {
 		tabs.push({
 			id: "api-structure",
-			label: "API Structure",
+			labelKey: "providers.config.tabs.apiStructure",
 		});
 	}
 	tabs.push({
 		id: "network",
-		label: "Network",
+		labelKey: "providers.config.tabs.network",
 	});
 	tabs.push({
 		id: "proxy",
-		label: "Proxy",
+		labelKey: "providers.config.tabs.proxy",
 	});
 	tabs.push({
 		id: "performance",
-		label: "Performance",
+		labelKey: "providers.config.tabs.performance",
 	});
 	if (hasGovernanceAccess) {
 		tabs.push({
 			id: "governance",
-			label: "Governance",
+			labelKey: "providers.config.tabs.governance",
 		});
 	}
 	if (isAnthropicFamily) {
 		tabs.push({
 			id: "beta-headers",
-			label: "Beta Headers",
+			labelKey: "providers.config.tabs.betaHeaders",
 		});
 	}
 	tabs.push({
 		id: "debugging",
-		label: "Debugging",
+		labelKey: "providers.config.tabs.debugging",
 	});
 	if (isOpenAI) {
 		tabs.push({
 			id: "openai-config",
-			label: "OpenAI Config",
+			labelKey: "providers.config.tabs.openaiConfig",
 		});
 	}
 	return tabs;
 };
 
 export default function ProviderConfigSheet({ show, onCancel, provider }: Props) {
+	const { t } = useTranslation();
 	const [selectedTab, setSelectedTab] = useState<string | undefined>(undefined);
 	const hasGovernanceAccess = useRbac(RbacResource.Governance, RbacOperation.View);
 	const hasCustomProviderConfig = !!provider.custom_provider_config;
@@ -103,7 +105,7 @@ export default function ProviderConfigSheet({ show, onCancel, provider }: Props)
 							<div className="flex items-center">
 								<Provider provider={provider.name} size={24} className="mt-0" />
 							</div>
-							Provider configuration
+							{t("providers.config.title")}
 						</div>
 					</SheetTitle>
 				</SheetHeader>
@@ -119,7 +121,7 @@ export default function ProviderConfigSheet({ show, onCancel, provider }: Props)
 											data-testid={`provider-tab-${tab.id}`}
 											className="flex-none px-3 whitespace-nowrap"
 										>
-											{tab.label}
+											{t(tab.labelKey)}
 										</TabsTrigger>
 									))}
 								</TabsList>

@@ -1,11 +1,13 @@
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdownMenu";
 
 export function ThemeToggle() {
 	const { setTheme } = useTheme();
+	const { t } = useTranslation();
 
 	return (
 		<DropdownMenu>
@@ -17,13 +19,13 @@ export function ThemeToggle() {
 				>
 					<Sun className="h-5.5 w-5.5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" strokeWidth={2} />
 					<Moon className="absolute h-5.5 w-5.5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" strokeWidth={2} />
-					<span className="sr-only">Toggle theme</span>
+					<span className="sr-only">{t("common.theme.toggle")}</span>
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => setTheme("light")}>{t("common.theme.light")}</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => setTheme("dark")}>{t("common.theme.dark")}</DropdownMenuItem>
+				<DropdownMenuItem onClick={() => setTheme("system")}>{t("common.theme.system")}</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
