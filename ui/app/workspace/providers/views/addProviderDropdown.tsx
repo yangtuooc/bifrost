@@ -9,6 +9,7 @@ import {
 import { ProviderIconType, RenderProviderIcon } from "@/lib/constants/icons";
 import { ProviderLabels } from "@/lib/constants/logs";
 import { PlusIcon, Settings2Icon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type ProviderOption = { name: string };
 
@@ -32,6 +33,7 @@ export function AddProviderDropdown({
 	disabled = false,
 	variant = "default",
 }: AddProviderDropdownProps) {
+	const { t } = useTranslation();
 	const availableKnown = knownProviders.filter((p) => !existingInSidebar.has(p.name));
 	const hasKnown = availableKnown.length > 0;
 
@@ -43,11 +45,15 @@ export function AddProviderDropdown({
 					size={variant === "empty" ? "default" : "sm"}
 					data-testid="add-provider-btn"
 					className={variant === "empty" ? "" : "w-full justify-start"}
-					aria-label="Add new provider"
+					aria-label={t("providers.addProvider.ariaLabel")}
 					disabled={disabled}
 				>
 					<PlusIcon className="h-4 w-4" />
-					{variant === "empty" ? <span>Add provider</span> : <div className="text-xs">Add New Provider</div>}
+					{variant === "empty" ? (
+						<span>{t("providers.addProvider.compact")}</span>
+					) : (
+						<div className="text-xs">{t("providers.addProvider.default")}</div>
+					)}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -65,7 +71,7 @@ export function AddProviderDropdown({
 				{/* Add New Provider > Custom provider... — used by E2E (add-provider-option-custom) */}
 				<DropdownMenuItem data-testid="add-provider-option-custom" onSelect={onAddCustomProvider}>
 					<Settings2Icon className="h-4 w-4" />
-					<span>Custom provider...</span>
+					<span>{t("providers.addProvider.customProvider")}</span>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

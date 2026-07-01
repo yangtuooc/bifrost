@@ -11,6 +11,7 @@ import { isRedacted } from "@/lib/utils/validation";
 import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Control, UseFormReturn } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { DeploymentsTable } from "./deploymentsTable";
 
 // Providers that support batch APIs
@@ -27,6 +28,8 @@ interface Props {
 
 // Batch API form field for all providers
 function BatchAPIFormField({ control }: { control: Control<any>; form: UseFormReturn<any> }) {
+	const { t } = useTranslation();
+
 	return (
 		<FormField
 			control={control}
@@ -34,10 +37,8 @@ function BatchAPIFormField({ control }: { control: Control<any>; form: UseFormRe
 			render={({ field }) => (
 				<FormItem className="flex flex-row items-center justify-between rounded-sm border p-2">
 					<div className="space-y-1.5">
-						<FormLabel>Use for Batch APIs</FormLabel>
-						<FormDescription>
-							Enable this key for batch API operations. Only keys with this enabled will be used for batch requests.
-						</FormDescription>
+						<FormLabel>{t("providers.keys.form.useForBatchApis")}</FormLabel>
+						<FormDescription>{t("providers.keys.form.useForBatchApisDescription")}</FormDescription>
 					</div>
 					<FormControl>
 						<Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
@@ -48,15 +49,17 @@ function BatchAPIFormField({ control }: { control: Control<any>; form: UseFormRe
 	);
 }
 
-export function ApiKeyFormFragment({ control, providerName, form }: Props) {
-	const isBedrock = providerName === "bedrock";
-	const isBedrockMantle = providerName === "bedrock_mantle";
-	const isVertex = providerName === "vertex";
-	const isAzure = providerName === "azure";
-	const isReplicate = providerName === "replicate";
-	const isVLLM = providerName === "vllm";
-	const isOllama = providerName === "ollama";
-	const isSGL = providerName === "sgl";
+export function ApiKeyFormFragment({ control, providerName, baseProviderType, form }: Props) {
+	const { t } = useTranslation();
+	const effectiveProvider = baseProviderType ?? providerName;
+	const isBedrock = effectiveProvider === "bedrock";
+	const isBedrockMantle = effectiveProvider === "bedrock_mantle";
+	const isVertex = effectiveProvider === "vertex";
+	const isAzure = effectiveProvider === "azure";
+	const isReplicate = effectiveProvider === "replicate";
+	const isVLLM = effectiveProvider === "vllm";
+	const isOllama = effectiveProvider === "ollama";
+	const isSGL = effectiveProvider === "sgl";
 	const isKeylessProvider = isOllama || isSGL;
 	const supportsBatchAPI = BATCH_SUPPORTED_PROVIDERS.includes(effectiveProvider);
 
@@ -161,9 +164,9 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 						name={`key.name`}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Name</FormLabel>
+								<FormLabel>{t("providers.keys.form.name")}</FormLabel>
 								<FormControl>
-									<Input placeholder="Production Key" type="text" {...field} />
+									<Input placeholder={t("providers.keys.form.namePlaceholder")} type="text" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -176,7 +179,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 					render={({ field }) => (
 						<FormItem>
 							<div className="flex items-center gap-2">
-								<FormLabel>Weight</FormLabel>
+								<FormLabel>{t("providers.keys.form.weight")}</FormLabel>
 								<TooltipProvider>
 									<Tooltip>
 										<TooltipTrigger asChild>
@@ -185,10 +188,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 											</span>
 										</TooltipTrigger>
 										<TooltipContent className="max-w-sm">
-											<p>
-												Determines traffic distribution between keys. Higher weights receive more requests. Not used when adaptive load
-												balancing is enabled - key selection is then based on live performance.
-											</p>
+											<p>{t("providers.keys.form.weightTooltip")}</p>
 										</TooltipContent>
 									</Tooltip>
 								</TooltipProvider>
@@ -229,9 +229,9 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 					name={`key.value`}
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel>API Key {isVLLM ? "(Optional)" : ""}</FormLabel>
+							<FormLabel>{isVLLM ? t("providers.keys.form.apiKeyOptional") : t("providers.keys.form.apiKey")}</FormLabel>
 							<FormControl>
-								<SecretVarInput placeholder="API Key or env.MY_KEY" type="text" {...field} />
+								<SecretVarInput placeholder={t("providers.keys.form.apiKeyPlaceholder")} type="text" {...field} />
 							</FormControl>
 							<FormMessage />
 						</FormItem>
@@ -246,7 +246,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 						render={({ field }) => (
 							<FormItem>
 								<div className="flex items-center gap-2">
-									<FormLabel>Allowed Models</FormLabel>
+									<FormLabel>{t("providers.keys.form.allowedModels")}</FormLabel>
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -255,11 +255,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 												</span>
 											</TooltipTrigger>
 											<TooltipContent className="max-w-sm">
-												<p>
-													Select specific models this key applies to, or choose "Allow All Models" to allow all. Leave empty to deny all.
-													Aliases must be added by their alias name - listing only the underlying model does not allow the alias (an alias
-													best-model → gpt-4o requires "best-model" here, not just "gpt-4o").
-												</p>
+												<p>{t("providers.keys.form.allowedModelsTooltip")}</p>
 											</TooltipContent>
 										</Tooltip>
 									</TooltipProvider>
@@ -283,10 +279,10 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 										}}
 										placeholder={
 											(field.value || []).includes("*")
-												? "All models allowed"
+												? t("providers.keys.form.allModelsAllowed")
 												: (field.value || []).length === 0
-													? "No models (deny all)"
-													: "Search models..."
+													? t("providers.keys.form.noModelsDenyAll")
+													: t("providers.keys.form.searchModels")
 										}
 										unfiltered={true}
 									/>
@@ -301,7 +297,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 						render={({ field }) => (
 							<FormItem data-testid="apikey-blacklisted-models-field">
 								<div className="flex items-center gap-2">
-									<FormLabel>Blocked Models</FormLabel>
+									<FormLabel>{t("providers.keys.form.blockedModels")}</FormLabel>
 									<TooltipProvider>
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -310,11 +306,7 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 												</span>
 											</TooltipTrigger>
 											<TooltipContent className="max-w-sm">
-												<p>
-													Models this key must never serve. The denylist always wins - if a model appears in both Allowed Models and here,
-													it is blocked. Select "All Models" to block every model on this key. Aliases are matched by their alias name -
-													blocking only the underlying model does not block aliases that point to it.
-												</p>
+												<p>{t("providers.keys.form.blockedModelsTooltip")}</p>
 											</TooltipContent>
 										</Tooltip>
 									</TooltipProvider>
@@ -338,10 +330,10 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 										}}
 										placeholder={
 											(field.value || []).includes("*")
-												? "All models blocked"
+												? t("providers.keys.form.allModelsBlocked")
 												: (field.value || []).length === 0
-													? "No models blocked"
-													: "Search models..."
+													? t("providers.keys.form.noModelsBlocked")
+													: t("providers.keys.form.searchModels")
 										}
 										unfiltered={true}
 									/>
@@ -355,12 +347,8 @@ export function ApiKeyFormFragment({ control, providerName, form }: Props) {
 						name={`key.aliases`}
 						render={({ field }) => (
 							<FormItem data-testid="apikey-deployments-field">
-								<FormLabel>Deployments (Optional)</FormLabel>
-								<FormDescription>
-									Map a request model name to the provider&apos;s identifier (deployment name, inference profile ID, fine-tuned endpoint ID,
-									etc.). Expand a row to set the canonical model name, model family, and provider-specific overrides - these power
-									cost/pricing logs and family-based routing.
-								</FormDescription>
+								<FormLabel>{t("providers.keys.form.deploymentsOptional")}</FormLabel>
+								<FormDescription>{t("providers.keys.form.deploymentsDescription")}</FormDescription>
 								<FormControl>
 									<div data-testid="apikey-deployments-table">
 										<DeploymentsTable
