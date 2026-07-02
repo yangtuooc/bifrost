@@ -24,7 +24,7 @@ https://ark.cn-beijing.volces.com/api/v3
 | Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
 | Image Generation | ✅ | ✅ | `/images/generations` | Uses Ark's OpenAI-compatible image generation API. |
 | Files | ✅ | - | `/files` | Uses Ark's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
-| Video Generation / Retrieve / Download | ✅ | - | `/contents/generations/tasks` | Uses Ark's native asynchronous video generation task API and maps task lifecycle into Bifrost's Video API abstraction. List and delete are not enabled because they are not part of the documented task flow for this integration. |
+| Video Generation / Retrieve / List / Delete / Download | ✅ | - | `/contents/generations/tasks` | Uses Ark's native asynchronous video generation task API and maps task lifecycle into Bifrost's Video API abstraction. Remix is not enabled because Ark video remix is not mapped in this provider. |
 | Text Completions | ❌ | ❌ | - | Not enabled because Ark's documented OpenAI-compatible model calls focus on Chat/Responses. |
 | Image Edit / Variation | ❌ | ❌ | - | Not documented as OpenAI-compatible for Ark in this integration. |
 | Speech / Transcription | ❌ | ❌ | - | No Bifrost OpenAI-compatible audio mapping is enabled for Ark. |
@@ -169,11 +169,13 @@ curl -X POST http://localhost:8080/v1/videos \
   }'
 ```
 
-Retrieve and download generated videos through Bifrost's standard Video endpoints. The provider uses Ark task IDs as Bifrost video IDs and maps completed task `video_url` values into `videos[].url`. Video list and delete return `unsupported_operation`.
+Retrieve, list, delete, and download generated videos through Bifrost's standard Video endpoints. The provider returns Ark task IDs as provider-scoped Bifrost video IDs in the `{task_id}:volcengine` format and maps completed task `video_url` values into `videos[].url`. Video remix returns `unsupported_operation`.
 
 ```bash
+curl "http://localhost:8080/v1/videos?provider=volcengine"
 curl "http://localhost:8080/v1/videos/{task_id}:volcengine"
 curl "http://localhost:8080/v1/videos/{task_id}:volcengine/content" --output output.mp4
+curl -X DELETE "http://localhost:8080/v1/videos/{task_id}:volcengine"
 ```
 
 ## Streaming

@@ -2937,6 +2937,8 @@ func TestDomesticProviders(t *testing.T) {
 		supportsSpeech         bool
 		speechPath             string
 		supportsVideo          bool
+		supportsVideoList      bool
+		supportsVideoDelete    bool
 		videoCreatePath        string
 		videoRetrievePath      string
 		videoDownloadPath      string
@@ -2944,7 +2946,7 @@ func TestDomesticProviders(t *testing.T) {
 		supportsBatch          bool
 	}{
 		{name: "Aliyun", providerKey: schemas.Aliyun, supportsText: true, supportsImages: true, supportsImageEdit: true, imagePath: "/api/v1/services/aigc/multimodal-generation/generation", supportsSpeech: true, speechPath: "/api/v1/services/aigc/multimodal-generation/generation", supportsVideo: true, videoCreatePath: "/api/v1/services/aigc/video-generation/video-synthesis", videoRetrievePath: "/api/v1/tasks/video-test", videoDownloadPath: "/download/aliyun-video-test.mp4", supportsFiles: true, supportsBatch: true},
-		{name: "Volcengine", providerKey: schemas.Volcengine, supportsImages: true, supportsImageStreaming: true, imagePath: "/images/generations", supportsVideo: true, videoCreatePath: "/contents/generations/tasks", videoRetrievePath: "/contents/generations/tasks/video-test", videoDownloadPath: "/download/video-test.mp4", supportsFiles: true},
+		{name: "Volcengine", providerKey: schemas.Volcengine, supportsImages: true, supportsImageStreaming: true, imagePath: "/images/generations", supportsVideo: true, supportsVideoList: true, supportsVideoDelete: true, videoCreatePath: "/contents/generations/tasks", videoRetrievePath: "/contents/generations/tasks/video-test", videoDownloadPath: "/download/video-test.mp4", supportsFiles: true},
 	}
 
 	for _, tt := range tests {
@@ -3217,9 +3219,33 @@ func TestDomesticProviders(t *testing.T) {
 						}`))
 						return
 					}
+					if r.Method == http.MethodGet {
+						_, _ = w.Write([]byte(`{
+								"object": "list",
+								"data": [{
+									"id": "video-test",
+									"object": "video",
+									"model": "test-video-model",
+									"status": "succeeded",
+									"created_at": 123,
+									"updated_at": 456,
+									"content": {"video_url": "http://` + r.Host + `/download/video-test.mp4"}
+								}],
+								"has_more": false
+						}`))
+						return
+					}
 					http.Error(w, "unexpected video tasks method: "+r.Method, http.StatusMethodNotAllowed)
 				case "/contents/generations/tasks/video-test":
 					w.Header().Set("Content-Type", "application/json")
+					if r.Method == http.MethodDelete {
+						_, _ = w.Write([]byte(`{
+								"id": "video-test",
+								"object": "video.deleted",
+								"deleted": true
+						}`))
+						return
+					}
 					_, _ = w.Write([]byte(`{
 							"id": "video-test",
 							"object": "video",
@@ -3699,7 +3725,8 @@ func TestDomesticProviders(t *testing.T) {
 				if bifrostErr != nil {
 					t.Fatalf("VideoGeneration returned error: %v", bifrostErr.Error.Message)
 				}
-				if videoResp == nil || videoResp.ID != "video-test" || videoResp.Status != schemas.VideoStatusQueued {
+				expectedVideoID := "video-test:" + string(tt.providerKey)
+				if videoResp == nil || videoResp.ID != expectedVideoID || videoResp.Status != schemas.VideoStatusQueued {
 					t.Fatalf("unexpected video generation response: %#v", videoResp)
 				}
 
@@ -3723,6 +3750,34 @@ func TestDomesticProviders(t *testing.T) {
 				}
 				if videoDownloadResp == nil || string(videoDownloadResp.Content) != "video bytes" || videoDownloadResp.ContentType != "video/mp4" {
 					t.Fatalf("unexpected video download response: %#v", videoDownloadResp)
+				}
+				if videoDownloadResp.VideoID != expectedVideoID {
+					t.Fatalf("video download id = %q, want %q", videoDownloadResp.VideoID, expectedVideoID)
+				}
+
+				if tt.supportsVideoList {
+					videoListResp, bifrostErr := provider.VideoList(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostVideoListRequest{
+						Provider: tt.providerKey,
+					})
+					if bifrostErr != nil {
+						t.Fatalf("VideoList returned error: %v", bifrostErr.Error.Message)
+					}
+					if videoListResp == nil || len(videoListResp.Data) != 1 || videoListResp.Data[0].ID != expectedVideoID {
+						t.Fatalf("unexpected video list response: %#v", videoListResp)
+					}
+				}
+
+				if tt.supportsVideoDelete {
+					videoDeleteResp, bifrostErr := provider.VideoDelete(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostVideoDeleteRequest{
+						Provider: tt.providerKey,
+						ID:       expectedVideoID,
+					})
+					if bifrostErr != nil {
+						t.Fatalf("VideoDelete returned error: %v", bifrostErr.Error.Message)
+					}
+					if videoDeleteResp == nil || !videoDeleteResp.Deleted || videoDeleteResp.ID != expectedVideoID {
+						t.Fatalf("unexpected video delete response: %#v", videoDeleteResp)
+					}
 				}
 			}
 
@@ -3857,11 +3912,19 @@ func TestDomesticProviders(t *testing.T) {
 			if tt.supportsFiles && paths["/files/file-test/content"] != 1 {
 				t.Fatalf("file content path count = %d, want 1", paths["/files/file-test/content"])
 			}
-			if tt.supportsVideo && paths[tt.videoCreatePath] != 1 {
-				t.Fatalf("video tasks path count = %d, want 1 for %s", paths[tt.videoCreatePath], tt.videoCreatePath)
+			expectedVideoCreatePathCount := 1
+			if tt.supportsVideoList && strings.HasPrefix(tt.videoRetrievePath, tt.videoCreatePath) {
+				expectedVideoCreatePathCount++
 			}
-			if tt.supportsVideo && paths[tt.videoRetrievePath] != 2 {
-				t.Fatalf("video task reference path count = %d, want 2 for %s", paths[tt.videoRetrievePath], tt.videoRetrievePath)
+			if tt.supportsVideo && paths[tt.videoCreatePath] != expectedVideoCreatePathCount {
+				t.Fatalf("video tasks path count = %d, want %d for %s", paths[tt.videoCreatePath], expectedVideoCreatePathCount, tt.videoCreatePath)
+			}
+			expectedVideoRetrievePathCount := 2
+			if tt.supportsVideoDelete {
+				expectedVideoRetrievePathCount++
+			}
+			if tt.supportsVideo && paths[tt.videoRetrievePath] != expectedVideoRetrievePathCount {
+				t.Fatalf("video task reference path count = %d, want %d for %s", paths[tt.videoRetrievePath], expectedVideoRetrievePathCount, tt.videoRetrievePath)
 			}
 			if tt.supportsVideo && paths[tt.videoDownloadPath] != 1 {
 				t.Fatalf("video download path count = %d, want 1 for %s", paths[tt.videoDownloadPath], tt.videoDownloadPath)

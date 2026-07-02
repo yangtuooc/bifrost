@@ -73,3 +73,31 @@ func TestVolcengineVideoTaskToBifrostVideoResponse(t *testing.T) {
 		t.Fatalf("unexpected videos: %#v", resp.Videos)
 	}
 }
+
+func TestVolcengineVideoTaskListToBifrostVideoListResponse(t *testing.T) {
+	hasMore := false
+	taskList := VolcengineVideoTaskListResponse{
+		Object:  "list",
+		HasMore: &hasMore,
+		Data: []VolcengineVideoTaskResponse{{
+			ID:        "video-test",
+			Object:    "video",
+			Model:     "doubao-seedance",
+			Status:    "succeeded",
+			CreatedAt: 123,
+			UpdatedAt: 456,
+			Content:   &VolcengineVideoTaskContent{VideoURL: "https://example.com/video.mp4"},
+		}},
+	}
+
+	resp := taskList.toBifrostVideoListResponse(schemas.Volcengine)
+	if resp.Object != "list" || resp.HasMore == nil || *resp.HasMore {
+		t.Fatalf("unexpected list metadata: %#v", resp)
+	}
+	if len(resp.Data) != 1 || resp.Data[0].ID != "video-test:volcengine" || resp.Data[0].Status != schemas.VideoStatusCompleted {
+		t.Fatalf("unexpected list data: %#v", resp.Data)
+	}
+	if resp.FirstID == nil || *resp.FirstID != "video-test:volcengine" || resp.LastID == nil || *resp.LastID != "video-test:volcengine" {
+		t.Fatalf("unexpected pagination ids: first=%#v last=%#v", resp.FirstID, resp.LastID)
+	}
+}

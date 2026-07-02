@@ -137,6 +137,9 @@ func (provider *AliyunProvider) handleVideoGeneration(ctx *schemas.BifrostContex
 	if response.CreatedAt == 0 {
 		response.CreatedAt = time.Now().Unix()
 	}
+	if response.ID != "" {
+		response.ID = providerUtils.AddVideoIDProviderSuffix(response.ID, provider.GetProviderKey())
+	}
 	response.ExtraFields.Latency = latency.Milliseconds()
 	response.ExtraFields.ProviderResponseHeaders = providerHeaders
 	if sendBackRawRequest {
@@ -150,7 +153,8 @@ func (provider *AliyunProvider) handleVideoGeneration(ctx *schemas.BifrostContex
 }
 
 func (provider *AliyunProvider) handleVideoRetrieve(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoRetrieveRequest) (*schemas.BifrostVideoGenerationResponse, *schemas.BifrostError) {
-	responseBody, latency, providerHeaders, bifrostErr := provider.doAliyunJSONRequest(ctx, http.MethodGet, provider.buildNativeURL(ctx, aliyunTaskPath+"/"+url.PathEscape(request.ID)), key, nil, nil)
+	videoID := providerUtils.StripVideoIDProviderSuffix(request.ID, provider.GetProviderKey())
+	responseBody, latency, providerHeaders, bifrostErr := provider.doAliyunJSONRequest(ctx, http.MethodGet, provider.buildNativeURL(ctx, aliyunTaskPath+"/"+url.PathEscape(videoID)), key, nil, nil)
 	if bifrostErr != nil {
 		return nil, bifrostErr
 	}
@@ -164,13 +168,17 @@ func (provider *AliyunProvider) handleVideoRetrieve(ctx *schemas.BifrostContext,
 	}
 
 	response := task.toBifrostVideoResponse("", "")
+	if response.ID != "" {
+		response.ID = providerUtils.AddVideoIDProviderSuffix(response.ID, provider.GetProviderKey())
+	}
 	response.ExtraFields.Latency = latency.Milliseconds()
 	response.ExtraFields.ProviderResponseHeaders = providerHeaders
 	return response, nil
 }
 
 func (provider *AliyunProvider) handleVideoDownload(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoDownloadRequest) (*schemas.BifrostVideoDownloadResponse, *schemas.BifrostError) {
-	retrieveResp, bifrostErr := provider.handleVideoRetrieve(ctx, key, &schemas.BifrostVideoRetrieveRequest{Provider: request.Provider, ID: request.ID})
+	videoID := providerUtils.StripVideoIDProviderSuffix(request.ID, provider.GetProviderKey())
+	retrieveResp, bifrostErr := provider.handleVideoRetrieve(ctx, key, &schemas.BifrostVideoRetrieveRequest{Provider: request.Provider, ID: videoID})
 	if bifrostErr != nil {
 		return nil, bifrostErr
 	}
@@ -183,7 +191,7 @@ func (provider *AliyunProvider) handleVideoDownload(ctx *schemas.BifrostContext,
 		return nil, bifrostErr
 	}
 	return &schemas.BifrostVideoDownloadResponse{
-		VideoID:     request.ID,
+		VideoID:     providerUtils.AddVideoIDProviderSuffix(videoID, provider.GetProviderKey()),
 		Content:     content,
 		ContentType: contentType,
 		ExtraFields: schemas.BifrostResponseExtraFields{

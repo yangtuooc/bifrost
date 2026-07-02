@@ -211,7 +211,7 @@ Bifrost maps `voice` to Alibaba Cloud's native `input.voice` field and maps `lan
 
 ## Video Generation
 
-Use Wan video models through Bifrost's unified Video API. Bifrost creates an Alibaba Cloud asynchronous task and returns the task ID as the Bifrost video ID.
+Use Wan video models through Bifrost's unified Video API. Bifrost creates an Alibaba Cloud asynchronous task and returns a provider-scoped Bifrost video ID in the `{task_id}:aliyun` format.
 
 ```bash
 curl -X POST http://localhost:8080/v1/videos \

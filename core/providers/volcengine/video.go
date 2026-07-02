@@ -35,6 +35,16 @@ type VolcengineVideoTaskResponse struct {
 	Task        *VolcengineVideoTaskResponse `json:"task,omitempty"`
 }
 
+type VolcengineVideoTaskListResponse struct {
+	Object  string                        `json:"object,omitempty"`
+	Data    []VolcengineVideoTaskResponse `json:"data,omitempty"`
+	Tasks   []VolcengineVideoTaskResponse `json:"tasks,omitempty"`
+	Items   []VolcengineVideoTaskResponse `json:"items,omitempty"`
+	FirstID *string                       `json:"first_id,omitempty"`
+	LastID  *string                       `json:"last_id,omitempty"`
+	HasMore *bool                         `json:"has_more,omitempty"`
+}
+
 type VolcengineVideoTaskContent struct {
 	VideoURL     string `json:"video_url,omitempty"`
 	VideoUrl     string `json:"videoUrl,omitempty"`
@@ -132,6 +142,9 @@ func (provider *VolcengineProvider) handleVideoGeneration(ctx *schemas.BifrostCo
 	if response.Status == "" {
 		response.Status = schemas.VideoStatusQueued
 	}
+	if response.ID != "" {
+		response.ID = providerUtils.AddVideoIDProviderSuffix(response.ID, provider.GetProviderKey())
+	}
 	response.ExtraFields.Latency = latency.Milliseconds()
 	response.ExtraFields.ProviderResponseHeaders = providerHeaders
 	response.BackfillParams(&schemas.BifrostRequest{VideoGenerationRequest: request})
@@ -139,7 +152,8 @@ func (provider *VolcengineProvider) handleVideoGeneration(ctx *schemas.BifrostCo
 }
 
 func (provider *VolcengineProvider) handleVideoRetrieve(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoRetrieveRequest) (*schemas.BifrostVideoGenerationResponse, *schemas.BifrostError) {
-	responseBody, latency, providerHeaders, bifrostErr := provider.doVolcengineJSONRequest(ctx, http.MethodGet, provider.volcengineURL(ctx, volcengineVideoTasksPath+"/"+url.PathEscape(request.ID), nil), key, nil)
+	videoID := providerUtils.StripVideoIDProviderSuffix(request.ID, provider.GetProviderKey())
+	responseBody, latency, providerHeaders, bifrostErr := provider.doVolcengineJSONRequest(ctx, http.MethodGet, provider.volcengineURL(ctx, volcengineVideoTasksPath+"/"+url.PathEscape(videoID), nil), key, nil)
 	if bifrostErr != nil {
 		return nil, bifrostErr
 	}
@@ -150,13 +164,17 @@ func (provider *VolcengineProvider) handleVideoRetrieve(ctx *schemas.BifrostCont
 	}
 
 	response := task.toBifrostVideoResponse("", "")
+	if response.ID != "" {
+		response.ID = providerUtils.AddVideoIDProviderSuffix(response.ID, provider.GetProviderKey())
+	}
 	response.ExtraFields.Latency = latency.Milliseconds()
 	response.ExtraFields.ProviderResponseHeaders = providerHeaders
 	return response, nil
 }
 
 func (provider *VolcengineProvider) handleVideoDownload(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoDownloadRequest) (*schemas.BifrostVideoDownloadResponse, *schemas.BifrostError) {
-	retrieveResp, bifrostErr := provider.handleVideoRetrieve(ctx, key, &schemas.BifrostVideoRetrieveRequest{Provider: request.Provider, ID: request.ID})
+	videoID := providerUtils.StripVideoIDProviderSuffix(request.ID, provider.GetProviderKey())
+	retrieveResp, bifrostErr := provider.handleVideoRetrieve(ctx, key, &schemas.BifrostVideoRetrieveRequest{Provider: request.Provider, ID: videoID})
 	if bifrostErr != nil {
 		return nil, bifrostErr
 	}
@@ -170,7 +188,7 @@ func (provider *VolcengineProvider) handleVideoDownload(ctx *schemas.BifrostCont
 	}
 
 	return &schemas.BifrostVideoDownloadResponse{
-		VideoID:     request.ID,
+		VideoID:     providerUtils.AddVideoIDProviderSuffix(videoID, provider.GetProviderKey()),
 		Content:     content,
 		ContentType: contentType,
 		ExtraFields: schemas.BifrostResponseExtraFields{
@@ -178,6 +196,76 @@ func (provider *VolcengineProvider) handleVideoDownload(ctx *schemas.BifrostCont
 			ProviderResponseHeaders: providerHeaders,
 		},
 	}, nil
+}
+
+func (provider *VolcengineProvider) handleVideoList(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoListRequest) (*schemas.BifrostVideoListResponse, *schemas.BifrostError) {
+	query := url.Values{}
+	if request != nil {
+		if request.After != nil && strings.TrimSpace(*request.After) != "" {
+			query.Set("after", providerUtils.StripVideoIDProviderSuffix(*request.After, provider.GetProviderKey()))
+		}
+		if request.Limit != nil {
+			query.Set("limit", strconv.Itoa(*request.Limit))
+		}
+		if request.Order != nil && strings.TrimSpace(*request.Order) != "" {
+			query.Set("order", *request.Order)
+		}
+	}
+
+	responseBody, latency, providerHeaders, bifrostErr := provider.doVolcengineJSONRequest(ctx, http.MethodGet, provider.volcengineURL(ctx, volcengineVideoTasksPath, query), key, nil)
+	if bifrostErr != nil {
+		return nil, bifrostErr
+	}
+
+	var taskList VolcengineVideoTaskListResponse
+	if err := sonic.Unmarshal(responseBody, &taskList); err != nil {
+		return nil, providerUtils.NewBifrostOperationError(schemas.ErrProviderResponseUnmarshal, err)
+	}
+
+	response := taskList.toBifrostVideoListResponse(provider.GetProviderKey())
+	response.ExtraFields.Latency = latency.Milliseconds()
+	response.ExtraFields.ProviderResponseHeaders = providerHeaders
+	return response, nil
+}
+
+func (provider *VolcengineProvider) handleVideoDelete(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostVideoDeleteRequest) (*schemas.BifrostVideoDeleteResponse, *schemas.BifrostError) {
+	if request == nil || strings.TrimSpace(request.ID) == "" {
+		return nil, providerUtils.NewBifrostOperationError("video id is required", nil)
+	}
+	videoID := providerUtils.StripVideoIDProviderSuffix(request.ID, provider.GetProviderKey())
+	responseBody, latency, providerHeaders, bifrostErr := provider.doVolcengineJSONRequest(ctx, http.MethodDelete, provider.volcengineURL(ctx, volcengineVideoTasksPath+"/"+url.PathEscape(videoID), nil), key, nil)
+	if bifrostErr != nil {
+		return nil, bifrostErr
+	}
+
+	response := &schemas.BifrostVideoDeleteResponse{
+		ID:      providerUtils.AddVideoIDProviderSuffix(videoID, provider.GetProviderKey()),
+		Object:  "video.deleted",
+		Deleted: true,
+		ExtraFields: schemas.BifrostResponseExtraFields{
+			Latency:                 latency.Milliseconds(),
+			ProviderResponseHeaders: providerHeaders,
+		},
+	}
+	if len(responseBody) > 0 {
+		var providerResp struct {
+			ID      string `json:"id,omitempty"`
+			Object  string `json:"object,omitempty"`
+			Deleted *bool  `json:"deleted,omitempty"`
+		}
+		if err := sonic.Unmarshal(responseBody, &providerResp); err == nil {
+			if providerResp.ID != "" {
+				response.ID = providerUtils.AddVideoIDProviderSuffix(providerResp.ID, provider.GetProviderKey())
+			}
+			if providerResp.Object != "" {
+				response.Object = providerResp.Object
+			}
+			if providerResp.Deleted != nil {
+				response.Deleted = *providerResp.Deleted
+			}
+		}
+	}
+	return response, nil
 }
 
 func volcengineVideoRequestBody(ctx *schemas.BifrostContext, request *schemas.BifrostVideoGenerationRequest) ([]byte, *schemas.BifrostError) {
@@ -312,6 +400,57 @@ func (task VolcengineVideoTaskResponse) toBifrostVideoResponse(defaultModel, def
 	return response
 }
 
+func (task VolcengineVideoTaskResponse) toBifrostVideoObject(providerName schemas.ModelProvider) schemas.VideoObject {
+	response := task.toBifrostVideoResponse("", "")
+	object := schemas.VideoObject{
+		ID:          providerUtils.AddVideoIDProviderSuffix(response.ID, providerName),
+		Object:      firstNonEmpty(response.Object, "video"),
+		Model:       response.Model,
+		Status:      response.Status,
+		CreatedAt:   response.CreatedAt,
+		CompletedAt: response.CompletedAt,
+		Progress:    response.Progress,
+		Prompt:      response.Prompt,
+		Seconds:     response.Seconds,
+		Size:        response.Size,
+		Error:       response.Error,
+	}
+	return object
+}
+
+func (taskList VolcengineVideoTaskListResponse) toBifrostVideoListResponse(providerName schemas.ModelProvider) *schemas.BifrostVideoListResponse {
+	tasks := taskList.tasks()
+	data := make([]schemas.VideoObject, 0, len(tasks))
+	for _, task := range tasks {
+		data = append(data, task.toBifrostVideoObject(providerName))
+	}
+
+	response := &schemas.BifrostVideoListResponse{
+		Object:  firstNonEmpty(taskList.Object, "list"),
+		Data:    data,
+		FirstID: addVideoIDProviderSuffixPtr(taskList.FirstID, providerName),
+		LastID:  addVideoIDProviderSuffixPtr(taskList.LastID, providerName),
+		HasMore: taskList.HasMore,
+	}
+	if response.FirstID == nil && len(data) > 0 {
+		response.FirstID = schemas.Ptr(data[0].ID)
+	}
+	if response.LastID == nil && len(data) > 0 {
+		response.LastID = schemas.Ptr(data[len(data)-1].ID)
+	}
+	return response
+}
+
+func (taskList VolcengineVideoTaskListResponse) tasks() []VolcengineVideoTaskResponse {
+	if len(taskList.Data) > 0 {
+		return taskList.Data
+	}
+	if len(taskList.Tasks) > 0 {
+		return taskList.Tasks
+	}
+	return taskList.Items
+}
+
 func (task VolcengineVideoTaskResponse) unwrapped() VolcengineVideoTaskResponse {
 	if task.Data != nil {
 		return task.Data.unwrapped()
@@ -361,4 +500,11 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func addVideoIDProviderSuffixPtr(id *string, providerName schemas.ModelProvider) *string {
+	if id == nil || strings.TrimSpace(*id) == "" {
+		return nil
+	}
+	return schemas.Ptr(providerUtils.AddVideoIDProviderSuffix(*id, providerName))
 }
