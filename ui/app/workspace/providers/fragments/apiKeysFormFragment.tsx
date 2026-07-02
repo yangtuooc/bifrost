@@ -51,6 +51,7 @@ function BatchAPIFormField({ control }: { control: Control<any>; form: UseFormRe
 
 export function ApiKeyFormFragment({ control, providerName, baseProviderType, form }: Props) {
 	const { t } = useTranslation();
+	// 自定义 Provider 的凭证 UI 由基础 Provider 类型决定；模型列表、部署表和 API 调用仍使用真实 providerName。
 	const effectiveProvider = baseProviderType ?? providerName;
 	const isBedrock = effectiveProvider === "bedrock";
 	const isBedrockMantle = effectiveProvider === "bedrock_mantle";
