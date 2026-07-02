@@ -10,8 +10,10 @@ import { getActiveTempToken } from "@/lib/store/apis/tempToken";
 import type { LogFilters as LogFiltersType, RecalculateCostProgress, RecalculateCostResponse } from "@/lib/types/logs";
 import { getApiBaseUrl } from "@/lib/utils/port";
 import { getRangeForPeriod, TIME_PERIODS } from "@/lib/utils/timeRange";
+import type { TFunction } from "i18next";
 import { Calculator, MoreVertical, Radio, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 interface LogsHeaderViewProps {
@@ -48,6 +50,7 @@ export function LogsHeaderView({
 	onToggleColumnVisibility,
 	onResetColumns,
 }: LogsHeaderViewProps) {
+	const { t } = useTranslation();
 	const [openMoreActionsPopover, setOpenMoreActionsPopover] = useState(false);
 	const [localSearch, setLocalSearch] = useState(filters.content_search || "");
 	const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -80,24 +83,33 @@ export function LogsHeaderView({
 	const handleRecalculateCosts = useCallback(async () => {
 		setOpenMoreActionsPopover(false);
 		const toastId = "logs-recalculate-costs";
-		const recalculatePromise = recalculateCostsWithProgress(filters, (progress) => {
+		const recalculatePromise = recalculateCostsWithProgress(filters, t, (progress) => {
 			const total = progress.total_matched || 0;
 			const processed = Math.min(progress.processed, total || progress.processed);
-			toast.loading("Recalculating log costs...", {
+			toast.loading(t("logs.header.recalculate.loading"), {
 				id: toastId,
 				description:
 					total > 0
-						? `${processed}/${total} checked, ${progress.updated} updated, ${progress.skipped} skipped`
-						: "Finding logs with missing costs",
+						? t("logs.header.recalculate.progress", {
+								processed,
+								total,
+								updated: progress.updated,
+								skipped: progress.skipped,
+							})
+						: t("logs.header.recalculate.findingMissingCosts"),
 			});
 		});
 
 		toast.promise(recalculatePromise, {
 			id: toastId,
-			loading: "Recalculating log costs...",
+			loading: t("logs.header.recalculate.loading"),
 			success: (response) => ({
-				message: `Recalculated costs for ${response.updated} logs`,
-				description: `${response.updated} logs updated, ${response.skipped} logs skipped, ${response.remaining} logs remaining`,
+				message: t("logs.header.recalculate.success", { count: response.updated }),
+				description: t("logs.header.recalculate.successDescription", {
+					updated: response.updated,
+					skipped: response.skipped,
+					remaining: response.remaining,
+				}),
 				duration: 5000,
 			}),
 			error: (err) => getErrorMessage(err),
@@ -108,7 +120,7 @@ export function LogsHeaderView({
 			await fetchLogs();
 			await fetchStats();
 		} catch {}
-	}, [filters, fetchLogs, fetchStats]);
+	}, [filters, fetchLogs, fetchStats, t]);
 
 	const handleSearchChange = useCallback(
 		(value: string) => {
@@ -136,7 +148,7 @@ export function LogsHeaderView({
 				disabled={loading}
 			>
 				<RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-				Refresh
+				{t("logs.header.refresh")}
 			</Button>
 			<Button
 				data-testid="logs-live-btn"
@@ -146,14 +158,14 @@ export function LogsHeaderView({
 				onClick={() => onPollToggle(!polling)}
 			>
 				{polling ? <Radio className="h-4 w-4 animate-pulse" /> : <Radio className="h-4 w-4" />}
-				Live
+				{t("logs.header.live")}
 			</Button>
 			<div className="border-input flex h-7.5 flex-1 items-center gap-2 rounded-sm border">
 				<Search className="mr-0.5 ml-2 size-4" />
 				<Input
 					type="text"
 					className="!h-7 rounded-tl-none rounded-tr-sm rounded-br-sm rounded-bl-none border-none bg-slate-50 shadow-none outline-none focus-visible:ring-0"
-					placeholder="Search logs"
+					placeholder={t("logs.header.searchPlaceholder")}
 					value={localSearch}
 					onChange={(e) => handleSearchChange(e.target.value)}
 				/>
@@ -193,8 +205,8 @@ export function LogsHeaderView({
 							<CommandItem className="hover:bg-accent/50 cursor-pointer" onSelect={handleRecalculateCosts}>
 								<Calculator className="text-muted-foreground size-4" />
 								<div className="flex flex-col">
-									<span className="text-sm">Recalculate costs</span>
-									<span className="text-muted-foreground text-xs">For all logs that don't have a cost</span>
+									<span className="text-sm">{t("logs.header.recalculate.action")}</span>
+									<span className="text-muted-foreground text-xs">{t("logs.header.recalculate.description")}</span>
 								</div>
 							</CommandItem>
 						</CommandList>
@@ -213,6 +225,7 @@ export function LogsHeaderView({
 
 async function recalculateCostsWithProgress(
 	filters: LogFiltersType,
+	t: TFunction,
 	onProgress: (progress: RecalculateCostProgress) => void,
 ): Promise<RecalculateCostResponse> {
 	const headers: Record<string, string> = {
@@ -232,10 +245,10 @@ async function recalculateCostsWithProgress(
 	});
 
 	if (!response.ok) {
-		throw await readRecalculateCostError(response);
+		throw await readRecalculateCostError(response, t);
 	}
 	if (!response.body) {
-		throw new Error("Recalculate cost stream is unavailable");
+		throw new Error(t("logs.header.recalculate.streamUnavailable"));
 	}
 
 	const reader = response.body.getReader();
@@ -253,7 +266,7 @@ async function recalculateCostsWithProgress(
 			const parsed = parseSSEEvent(eventBlock);
 			if (!parsed || parsed.data === "[DONE]") continue;
 			if (parsed.event === "error") {
-				throw parseRecalculateCostStreamError(parsed.data);
+				throw parseRecalculateCostStreamError(parsed.data, t);
 			}
 			if (parsed.event === "progress") {
 				onProgress(JSON.parse(parsed.data) as RecalculateCostProgress);
@@ -269,7 +282,7 @@ async function recalculateCostsWithProgress(
 	if (buffer.trim()) {
 		const parsed = parseSSEEvent(buffer);
 		if (parsed?.event === "error") {
-			throw parseRecalculateCostStreamError(parsed.data);
+			throw parseRecalculateCostStreamError(parsed.data, t);
 		}
 		if (parsed?.event === "done") {
 			finalResult = JSON.parse(parsed.data) as RecalculateCostResponse;
@@ -277,7 +290,7 @@ async function recalculateCostsWithProgress(
 	}
 
 	if (!finalResult) {
-		throw new Error("Recalculate cost stream ended before a final result was received");
+		throw new Error(t("logs.header.recalculate.streamEndedEarly"));
 	}
 	return finalResult;
 }
@@ -297,19 +310,19 @@ function parseSSEEvent(block: string): { event: string; data: string } | undefin
 	return { event, data: data.join("\n") };
 }
 
-async function readRecalculateCostError(response: Response): Promise<Error> {
+async function readRecalculateCostError(response: Response, t: TFunction): Promise<Error> {
 	try {
-		return parseRecalculateCostStreamError(await response.text());
+		return parseRecalculateCostStreamError(await response.text(), t);
 	} catch {
-		return new Error(`Failed to recalculate costs (${response.status})`);
+		return new Error(t("logs.header.recalculate.failedWithStatus", { status: response.status }));
 	}
 }
 
-function parseRecalculateCostStreamError(data: string): Error {
+function parseRecalculateCostStreamError(data: string, t: TFunction): Error {
 	try {
 		const parsed = JSON.parse(data) as { error?: { message?: string }; message?: string };
-		return new Error(parsed.error?.message || parsed.message || "Failed to recalculate costs");
+		return new Error(parsed.error?.message || parsed.message || t("logs.header.recalculate.failed"));
 	} catch {
-		return new Error(data || "Failed to recalculate costs");
+		return new Error(data || t("logs.header.recalculate.failed"));
 	}
 }

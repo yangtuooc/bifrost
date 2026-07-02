@@ -2,6 +2,7 @@ import { cn } from "@/components/ui/utils";
 import { useLazyGetBaseModelsQuery, useLazyGetModelsQuery } from "@/lib/store/apis/providersApi";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { components, MultiValueProps, OptionProps, SingleValueProps } from "react-select";
 import { AsyncMultiSelect } from "./asyncMultiselect";
 import { Option } from "./multiselectUtils";
@@ -58,9 +59,8 @@ interface ModelOption {
 	provider?: string;
 }
 
-const ALL_MODELS_OPTION: ModelOption = { label: "All Models", value: "*" };
-
 export function ModelMultiselect(props: ModelMultiselectProps) {
+	const { t } = useTranslation();
 	const {
 		provider,
 		keys,
@@ -68,7 +68,7 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 		value,
 		unfiltered = false,
 		onChange,
-		placeholder = "Search models...",
+		placeholder,
 		disabled = false,
 		className,
 		loadModelsOnEmptyProvider = false,
@@ -76,6 +76,7 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 		clearable = false,
 	} = props;
 	const isSingleSelect = props.isSingleSelect === true;
+	const allModelsOption = useMemo<ModelOption>(() => ({ label: t("common.modelSelect.allModels"), value: "*" }), [t]);
 
 	const [getModels, { data: modelsData, isLoading }] = useLazyGetModelsQuery();
 	const [getBaseModels, { data: baseModelsData, isLoading: isLoadingBaseModels }] = useLazyGetBaseModelsQuery();
@@ -91,9 +92,9 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 	const arrayValue = value as string[];
 	const selectedOptions: ModelOption[] = isSingleSelect
 		? stringValue
-			? [stringValue === "*" ? ALL_MODELS_OPTION : { label: stringValue, value: stringValue }]
+			? [stringValue === "*" ? allModelsOption : { label: stringValue, value: stringValue }]
 			: []
-		: arrayValue.map((model) => (model === "*" ? ALL_MODELS_OPTION : { label: model, value: model }));
+		: arrayValue.map((model) => (model === "*" ? allModelsOption : { label: model, value: model }));
 
 	// Fetch initial models on mount or when provider/keys/vks change
 	useEffect(() => {
@@ -121,7 +122,10 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 	const loadOptions = useCallback(
 		(query: string, callback: (options: ModelOption[]) => void) => {
 			// Prepend "Allow All Models" when allowAllOption is enabled and query matches (or is empty)
-			const prefix: ModelOption[] = allowAllOption && (!query || "all models".includes(query.toLowerCase())) ? [ALL_MODELS_OPTION] : [];
+			const prefix: ModelOption[] =
+				allowAllOption && (!query || t("common.modelSelect.allModels").toLowerCase().includes(query.toLowerCase()))
+					? [allModelsOption]
+					: [];
 
 			if (!provider && !shouldLoadOnEmpty) {
 				callback(prefix);
@@ -167,7 +171,7 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 					});
 			}
 		},
-		[getModels, getBaseModels, provider, keys, vks, shouldLoadOnEmpty, shouldUseBaseModels, allowAllOption],
+		[getModels, getBaseModels, provider, keys, vks, shouldLoadOnEmpty, shouldUseBaseModels, allowAllOption, allModelsOption, t],
 	);
 
 	// Handle selection change
@@ -226,7 +230,7 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 
 	// Convert API data to options for default display
 	const defaultOptions: ModelOption[] = useMemo(() => {
-		const prefix = allowAllOption ? [ALL_MODELS_OPTION] : [];
+		const prefix = allowAllOption ? [allModelsOption] : [];
 		if (shouldUseBaseModels) {
 			return [
 				...prefix,
@@ -244,7 +248,7 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 				provider: model.provider,
 			})) || []),
 		];
-	}, [modelsData, baseModelsData, shouldUseBaseModels, allowAllOption]);
+	}, [modelsData, baseModelsData, shouldUseBaseModels, allowAllOption, allModelsOption]);
 
 	const shouldBeDisabled = disabled || (!provider && !shouldLoadOnEmpty);
 
@@ -261,10 +265,10 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 			debounce={300}
 			isCreatable={true}
 			dynamicOptionCreation={true}
-			createOptionText={"Press enter to add new model"}
+			createOptionText={t("common.modelSelect.pressEnterToAdd")}
 			defaultOptions={defaultOptions.length > 0 ? defaultOptions : ([] as Option<ModelOption>[])}
 			isLoading={shouldUseBaseModels ? isLoadingBaseModels : isLoading}
-			placeholder={placeholder}
+			placeholder={placeholder ?? t("common.modelSelect.searchModels")}
 			disabled={shouldBeDisabled}
 			className={cn("!min-h-9 w-full", className)}
 			triggerClassName="!shadow-none !border-border !min-h-9 px-1"
@@ -277,8 +281,10 @@ export function ModelMultiselect(props: ModelMultiselectProps) {
 			menuListClassName="mx-1"
 			inputValue={inputValue}
 			onInputChange={handleInputChange}
-			noResultsFoundPlaceholder="No models found"
-			emptyResultPlaceholder={provider || shouldLoadOnEmpty ? "Start typing to search models..." : "Please select a provider first"}
+			noResultsFoundPlaceholder={t("common.modelSelect.noModelsFound")}
+			emptyResultPlaceholder={
+				provider || shouldLoadOnEmpty ? t("common.modelSelect.startTyping") : t("common.modelSelect.selectProviderFirst")
+			}
 			views={{
 				dropdownIndicator: isSingleSelect ? undefined : () => <></>,
 				singleValue: isSingleSelect

@@ -3,6 +3,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Validator } from "@/lib/utils/validation";
 import { Save } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface FormFooterProps {
 	validator: Validator;
@@ -14,18 +15,19 @@ interface FormFooterProps {
 }
 
 export default function FormFooter({ validator, label, onCancel, isLoading, isEditing, hasPermission = true }: FormFooterProps) {
+	const { t } = useTranslation();
 	const isDisabled = isLoading || !validator.isValid() || !hasPermission;
 
 	const getTooltipMessage = () => {
-		if (!hasPermission) return "You don't have permission to perform this action";
-		if (isLoading) return "Saving...";
-		return validator.getFirstError() || "Please fix validation errors";
+		if (!hasPermission) return t("common.formFooter.noPermission");
+		if (isLoading) return t("common.actions.saving");
+		return validator.getFirstError() || t("common.formFooter.fixValidationErrors");
 	};
 
 	return (
 		<DialogFooter className="mt-4">
 			<Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-				Cancel
+				{t("common.actions.cancel")}
 			</Button>
 			<TooltipProvider>
 				<Tooltip>
@@ -33,7 +35,11 @@ export default function FormFooter({ validator, label, onCancel, isLoading, isEd
 						<span>
 							<Button type="submit" disabled={isDisabled}>
 								<Save className="h-4 w-4" />
-								{isLoading ? "Saving..." : isEditing ? `Update ${label}` : `Create ${label}`}
+								{isLoading
+									? t("common.actions.saving")
+									: isEditing
+										? t("common.formFooter.updateLabel", { label })
+										: t("common.formFooter.createLabel", { label })}
 							</Button>
 						</span>
 					</TooltipTrigger>

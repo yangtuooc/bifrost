@@ -6,18 +6,18 @@ import { TriStateCheckbox } from "@/components/ui/tristateCheckbox";
 import { getErrorMessage, useGetLoadedPluginsQuery, useGetPluginQuery, useUpdatePluginMutation } from "@/lib/store";
 import { PluginSpanFilter } from "@/lib/types/config";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 interface PluginTracingSheetProps {
 	open: boolean;
 	onClose: () => void;
 	/**
-	 * Backend plugin name of the observability connector whose span filter is being edited
-	 * (e.g. "otel", "datadog", "bigquery"). The sheet reads/writes only this plugin's
-	 * `plugin_span_filter`; the backend merges it over the rest of the connector config.
+	 * 正在编辑 span filter 的 observability connector 后端 plugin name（如 "otel"、"datadog"、"bigquery"）。
+	 * Sheet 只读写该 plugin 的 `plugin_span_filter`，后端会将它合并到 connector config。
 	 */
 	pluginName: string;
-	/** Human-readable destination used in the copy, e.g. "the OTEL collector", "Datadog". */
+	/** 展示用目标名称，如 "the OTEL collector"、"Datadog"。 */
 	destination: string;
 }
 
@@ -60,9 +60,8 @@ function PluginRow({ name, checked, onChange }: { name: string; checked: boolean
 }
 
 export default function PluginTracingSheet({ open, onClose, pluginName, destination }: PluginTracingSheetProps) {
-	// All currently loaded plugins (built-in, enterprise, custom, and auto-loaded) that can
-	// emit spans, named to match the connector's span filter. One flat list — the backend
-	// already returns the complete set, so there's no built-in/custom split to maintain.
+	const { t } = useTranslation();
+	// 当前所有可发出 spans 的已加载 plugins，名称与 connector 的 span filter 对齐。
 	const { data: allPlugins = [], isLoading: isLoadingLoadedPlugins } = useGetLoadedPluginsQuery();
 	const { data: targetPlugin } = useGetPluginQuery(pluginName);
 	const [updatePlugin, { isLoading }] = useUpdatePluginMutation();
@@ -71,7 +70,7 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
-			if (!targetPlugin) return; // wait until persisted config is available
+			if (!targetPlugin) return; // 等待持久化配置可用。
 			const filter = (targetPlugin.config?.plugin_span_filter as PluginSpanFilter | undefined) ?? null;
 			if (isLoadingLoadedPlugins || allPlugins.length === 0) return;
 			setToggles(resolveToggleState(filter, allPlugins));
@@ -86,14 +85,12 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 
 	const handleSave = useCallback(async () => {
 		if (!wasOpenRef.current) {
-			// Toggles haven't been initialized from persisted config yet (e.g. the plugin list
-			// is still loading for an include-mode filter). Saving now would build an empty
-			// filter and wipe the stored plugin_span_filter, so block until init completes.
-			toast.error("Plugin list is still loading. Please wait before saving.");
+			// toggles 尚未从持久化配置初始化，阻止保存以避免写入空 filter 覆盖旧配置。
+			toast.error(t("observability.pluginTracing.toasts.pluginsLoading"));
 			return;
 		}
 		if (!targetPlugin) {
-			toast.error(`${destination} is not configured yet. Save its configuration before configuring plugin tracing.`);
+			toast.error(t("observability.pluginTracing.toasts.notConfigured", { destination }));
 			return;
 		}
 		const filter = buildFilter(toggles);
@@ -105,29 +102,28 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 					config: { plugin_span_filter: filter },
 				},
 			}).unwrap();
-			toast.success("Plugin tracing configuration saved");
+			toast.success(t("observability.pluginTracing.toasts.saved"));
 			onClose();
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
-	}, [toggles, targetPlugin, updatePlugin, onClose, pluginName, destination]);
+	}, [toggles, targetPlugin, updatePlugin, onClose, pluginName, destination, t]);
 
 	return (
 		<Sheet open={open} onOpenChange={onClose}>
 			<SheetContent className="flex w-full flex-col overflow-hidden p-8">
 				<SheetHeader className="flex flex-col items-start p-0">
-					<SheetTitle>Configure Plugin Tracing</SheetTitle>
-					<SheetDescription>
-						Choose which plugin hook spans are exported to {destination}. Disabling a plugin removes its spans from traces without affecting
-						execution.
-					</SheetDescription>
+					<SheetTitle>{t("observability.pluginTracing.title")}</SheetTitle>
+					<SheetDescription>{t("observability.pluginTracing.description", { destination })}</SheetDescription>
 				</SheetHeader>
 
 				<div className="mt-4 flex-1 overflow-y-auto">
 					<div className="flex flex-col gap-4">
 						<div>
 							<div className="mb-2 flex items-center justify-between">
-								<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Plugins</p>
+								<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+									{t("observability.pluginTracing.plugins")}
+								</p>
 								<TriStateCheckbox
 									allIds={allPlugins}
 									selectedIds={allPlugins.filter((n) => toggles[n] ?? true)}
@@ -139,7 +135,7 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 											return updated;
 										});
 									}}
-									ariaLabel="Toggle all plugin tracing"
+									ariaLabel={t("observability.pluginTracing.toggleAllAria")}
 									data-testid="plugin-tracing-select-all"
 								/>
 							</div>
@@ -156,14 +152,15 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 					<Alert variant="info">
 						<AlertDescription>
 							<span>
-								If <strong className="inline">plugin_span_filter</strong> is set in the <strong className="inline">{pluginName}</strong>{" "}
-								plugin config in config.json, it takes precedence over these settings after restarting Bifrost.
+								{t("observability.pluginTracing.configPrecedenceStart")} <strong className="inline">plugin_span_filter</strong>{" "}
+								{t("observability.pluginTracing.configPrecedenceMiddle")} <strong className="inline">{pluginName}</strong>{" "}
+								{t("observability.pluginTracing.configPrecedenceEnd")}
 							</span>
 						</AlertDescription>
 					</Alert>
 					<div className="flex justify-end gap-2 pt-2">
 						<Button type="button" variant="outline" onClick={onClose} disabled={isLoading} data-testid="plugin-tracing-cancel-button">
-							Cancel
+							{t("common.actions.cancel")}
 						</Button>
 						<Button
 							onClick={handleSave}
@@ -172,7 +169,7 @@ export default function PluginTracingSheet({ open, onClose, pluginName, destinat
 							data-testid="plugin-tracing-save-button"
 							type="button"
 						>
-							Save
+							{t("common.actions.save")}
 						</Button>
 					</div>
 				</div>

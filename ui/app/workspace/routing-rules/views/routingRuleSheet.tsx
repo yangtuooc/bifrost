@@ -1,6 +1,6 @@
 /**
- * Routing Rule Dialog (Sheet)
- * Create/Edit form for routing rules
+ * Routing Rule 抽屉
+ * 创建/编辑路由规则表单
  */
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Plus, Trash2, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { RuleGroupType } from "react-querybuilder";
 import { toast } from "sonner";
 
@@ -48,19 +49,24 @@ const defaultQuery: RuleGroupType = {
 	rules: [],
 };
 
-// Lazy-load CEL builder (heavy dependency tree).
+// 懒加载 CEL builder，避免主包引入较重依赖树
 const CELRuleBuilderLazy = lazy(() =>
 	import("@/app/workspace/routing-rules/components/celBuilder/celRuleBuilder").then((mod) => ({
 		default: mod.CELRuleBuilder,
 	})),
 );
-const CELRuleBuilder = (props: React.ComponentProps<typeof CELRuleBuilderLazy>) => (
-	<Suspense fallback={<div className="text-sm text-gray-500">Loading CEL builder...</div>}>
-		<CELRuleBuilderLazy {...props} />
-	</Suspense>
-);
+const CELRuleBuilder = (props: React.ComponentProps<typeof CELRuleBuilderLazy>) => {
+	const { t } = useTranslation();
+
+	return (
+		<Suspense fallback={<div className="text-sm text-gray-500">{t("routingRules.sheet.builder.loading")}</div>}>
+			<CELRuleBuilderLazy {...props} />
+		</Suspense>
+	);
+};
 
 export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }: RoutingRuleDialogProps) {
+	const { t } = useTranslation();
 	const { data: rulesData } = useGetRoutingRulesQuery();
 	const rules = rulesData?.rules || [];
 	const { data: providersData = [] } = useGetProvidersQuery();
@@ -71,7 +77,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 	const [createRoutingRule, { isLoading: isCreating }] = useCreateRoutingRuleMutation();
 	const [updateRoutingRule, { isLoading: isUpdating }] = useUpdateRoutingRuleMutation();
 
-	// State for targets and query (managed outside react-hook-form for complex nested structures)
+	// targets 和 query 是复杂嵌套结构，单独管理更清晰
 	const [targets, setTargets] = useState<RoutingTargetFormData[]>([{ ...DEFAULT_ROUTING_TARGET }]);
 	const [query, setQuery] = useState<RuleGroupType>(defaultQuery);
 	const [builderKey, setBuilderKey] = useState(0);
@@ -98,9 +104,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 	const scopeId = watch("scope_id");
 	const fallbacks = watch("fallbacks");
 
-	// Get available providers from configured providers, plus any provider already
-	// referenced by the current targets, existing rules' targets, or rules' fallbacks
-	// so edited/removed providers are still visible in the dropdown.
+	// 合并已配置 Provider 和规则中仍被引用的 Provider，确保编辑历史配置时选项仍可见
 	const availableProviders = Array.from(
 		new Set([
 			...providersData.map((p) => p.name),
@@ -115,7 +119,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		icon: <RenderProviderIcon provider={prov as ProviderIconType} size="sm" className="h-4 w-4" />,
 	}));
 
-	// Initialize form data when editing rule changes
+	// 编辑对象变化时初始化表单数据
 	useEffect(() => {
 		if (editingRule) {
 			setValue("id", editingRule.id);
@@ -141,7 +145,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 			} else {
 				setTargets([{ ...DEFAULT_ROUTING_TARGET }]);
 			}
-			// Only react-querybuilder-shaped queries are valid; config may store other JSON under `query`.
+			// 仅 react-querybuilder 形态的 query 有效，配置中可能存储其他 JSON
 			setQuery(normalizeRoutingRuleGroupQuery(editingRule.query));
 			setBuilderKey((prev) => prev + 1);
 		} else {
@@ -176,43 +180,45 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 	const totalWeight = targets.reduce((sum, t) => sum + (t.weight || 0), 0);
 
 	const onSubmit = (data: RoutingRuleFormData) => {
-		// Validate scope_id is required when scope is not global
+		const scopeLabel = t(`routingRules.scopes.${data.scope}`, { defaultValue: data.scope });
+
+		// 非 global scope 必须选择具体实体
 		if (data.scope !== "global" && !data.scope_id?.trim()) {
-			toast.error(`${data.scope === "team" ? "Team" : data.scope === "customer" ? "Customer" : "Virtual Key"} is required`);
+			toast.error(t("routingRules.sheet.validation.scopeRequired", { scope: scopeLabel }));
 			return;
 		}
 
-		// Validate targets
+		// 校验目标配置
 		if (targets.length === 0) {
-			toast.error("At least one routing target is required");
+			toast.error(t("routingRules.sheet.validation.targetRequired"));
 			return;
 		}
-		for (const t of targets) {
-			if (t.weight <= 0) {
-				toast.error("Each target weight must be greater than 0");
+		for (const target of targets) {
+			if (target.weight <= 0) {
+				toast.error(t("routingRules.sheet.validation.targetWeightPositive"));
 				return;
 			}
 		}
 		if (Math.abs(totalWeight - 1) > 0.001) {
-			toast.error(`Target weights must sum to 1, current total: ${totalWeight.toFixed(4)}`);
+			toast.error(t("routingRules.sheet.validation.targetWeightSum", { total: totalWeight.toFixed(4) }));
 			return;
 		}
 
-		// Validate regex patterns in routing rules
+		// 校验路由规则中的 regex pattern
 		const regexErrors = validateRoutingRules(query);
 		if (regexErrors.length > 0) {
-			toast.error(`Invalid regex pattern:\n${regexErrors.join("\n")}`);
+			toast.error(t("routingRules.sheet.validation.invalidRegex", { errors: regexErrors.join("\n") }));
 			return;
 		}
 
-		// Validate rate limit and budget rules
+		// 校验 rate limit 和 budget 规则
 		const rateLimitErrors = validateRateLimitAndBudgetRules(query);
 		if (rateLimitErrors.length > 0) {
-			toast.error(`Invalid rule configuration:\n${rateLimitErrors.join("\n")}`);
+			toast.error(t("routingRules.sheet.validation.invalidRuleConfig", { errors: rateLimitErrors.join("\n") }));
 			return;
 		}
 
-		// Filter out incomplete fallbacks (empty provider)
+		// 过滤缺失 Provider 的 fallback
 		const validFallbacks = (data.fallbacks || []).filter((fb) => {
 			const provider = fb.split("/")[0]?.trim();
 			return provider && provider.length > 0;
@@ -247,7 +253,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 
 		submitPromise
 			.then(() => {
-				toast.success(isEditing ? "Routing rule updated successfully" : "Routing rule created successfully");
+				toast.success(isEditing ? t("routingRules.sheet.toasts.updated") : t("routingRules.sheet.toasts.created"));
 				reset();
 				setTargets([{ ...DEFAULT_ROUTING_TARGET }]);
 				setQuery(defaultQuery);
@@ -272,50 +278,52 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="flex w-full min-w-1/2 flex-col gap-4 overflow-x-hidden p-0 pt-4">
 				<SheetHeader className="flex flex-col items-start px-8 py-4" headerClassName="mb-0 sticky -top-4 bg-card z-10">
-					<SheetTitle>{isEditing ? "Edit Routing Rule" : "Create New Routing Rule"}</SheetTitle>
+					<SheetTitle>{isEditing ? t("routingRules.sheet.title.edit") : t("routingRules.sheet.title.create")}</SheetTitle>
 					<SheetDescription>
-						{isEditing ? "Update the routing rule configuration" : "Create a new CEL-based routing rule for intelligent request routing"}
+						{isEditing ? t("routingRules.sheet.title.editDescription") : t("routingRules.sheet.title.createDescription")}
 					</SheetDescription>
 				</SheetHeader>
 
 				<form onSubmit={handleSubmit(onSubmit)} className="flex grow flex-col">
 					<div className="flex grow flex-col gap-6 px-8 pb-6">
-						{/* Rule Name */}
+						{/* 规则名称 */}
 						<div className="space-y-3">
 							<Label htmlFor="name">
-								Rule Name <span className="text-red-500">*</span>
+								{t("routingRules.sheet.fields.ruleName")} <span className="text-red-500">*</span>
 							</Label>
 							<Input
 								id="name"
-								placeholder="e.g., Route GPT-4 to Azure"
-								{...register("name", { required: "Rule name is required", maxLength: 255 })}
+								placeholder={t("routingRules.sheet.fields.ruleNamePlaceholder")}
+								{...register("name", { required: t("routingRules.sheet.validation.ruleNameRequired"), maxLength: 255 })}
 							/>
 							{errors.name && <p className="text-destructive text-sm">{errors.name.message}</p>}
 						</div>
 
-						{/* Description */}
+						{/* 描述 */}
 						<div className="space-y-3">
-							<Label htmlFor="description">Description</Label>
-							<Textarea id="description" placeholder="Describe what this rule does..." rows={2} {...register("description")} />
+							<Label htmlFor="description">{t("routingRules.sheet.fields.description")}</Label>
+							<Textarea
+								id="description"
+								placeholder={t("routingRules.sheet.fields.descriptionPlaceholder")}
+								rows={2}
+								{...register("description")}
+							/>
 						</div>
 
-						{/* Enabled Switch */}
+						{/* 启用开关 */}
 						<div className="flex items-center justify-between rounded-lg border p-4">
 							<div className="space-y-0.5">
-								<Label htmlFor="enabled">Enable Rule</Label>
-								<p className="text-muted-foreground text-sm">Rule will be active and applied to matching requests</p>
+								<Label htmlFor="enabled">{t("routingRules.sheet.fields.enableRule")}</Label>
+								<p className="text-muted-foreground text-sm">{t("routingRules.sheet.fields.enableRuleDescription")}</p>
 							</div>
 							<Switch id="enabled" checked={enabled} onCheckedChange={(checked) => setValue("enabled", checked)} />
 						</div>
 
-						{/* Chain Rule Switch */}
+						{/* 链式规则开关 */}
 						<div className="flex items-center justify-between rounded-lg border p-4">
 							<div className="space-y-0.5">
-								<Label htmlFor="chain_rule">Chain Rule</Label>
-								<p className="text-muted-foreground text-sm">
-									After this rule matches, re-evaluate routing rules using the resolved provider/model as the new context. Useful for
-									composing rules — e.g. normalize a model alias first, then route based on the canonical name.
-								</p>
+								<Label htmlFor="chain_rule">{t("routingRules.sheet.fields.chainRule")}</Label>
+								<p className="text-muted-foreground text-sm">{t("routingRules.sheet.fields.chainRuleDescription")}</p>
 							</div>
 							<Switch
 								id="chain_rule"
@@ -325,25 +333,25 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 							/>
 						</div>
 
-						{/* Scope and Priority - Side by Side */}
+						{/* Scope 与优先级 */}
 						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-3">
-								<Label htmlFor="scope">Scope</Label>
+								<Label htmlFor="scope">{t("routingRules.sheet.fields.scope")}</Label>
 								<Select
 									value={scope}
 									onValueChange={(value) => {
 										setValue("scope", value as any);
-										// Clear scope_id when scope changes
+										// scope 变化后清空已选实体
 										setValue("scope_id", "");
 									}}
 								>
 									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Select scope..." />
+										<SelectValue placeholder={t("routingRules.sheet.fields.selectScope")} />
 									</SelectTrigger>
 									<SelectContent>
 										{ROUTING_RULE_SCOPES.map((scopeOption) => (
 											<SelectItem key={scopeOption.value} value={scopeOption.value}>
-												{scopeOption.label}
+												{t(`routingRules.scopes.${scopeOption.value}`, { defaultValue: scopeOption.label })}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -352,7 +360,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 
 							<div className="space-y-3">
 								<Label htmlFor="priority">
-									Priority <span className="text-red-500">*</span>
+									{t("routingRules.sheet.fields.priority")} <span className="text-red-500">*</span>
 								</Label>
 								<Input
 									id="priority"
@@ -360,13 +368,13 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									min={0}
 									max={1000}
 									{...register("priority", {
-										required: "Priority is required",
-										min: { value: 0, message: "Priority must be ≥ 0" },
-										max: { value: 1000, message: "Priority must be ≤ 1000" },
+										required: t("routingRules.sheet.validation.priorityRequired"),
+										min: { value: 0, message: t("routingRules.sheet.validation.priorityMin") },
+										max: { value: 1000, message: t("routingRules.sheet.validation.priorityMax") },
 										valueAsNumber: true,
 									})}
 								/>
-								<p className="text-muted-foreground text-xs">Lower numbers = higher priority (0 is highest)</p>
+								<p className="text-muted-foreground text-xs">{t("routingRules.sheet.fields.priorityHint")}</p>
 								{errors.priority && <p className="text-destructive text-sm">{errors.priority.message}</p>}
 							</div>
 						</div>
@@ -374,14 +382,14 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 						{scope !== "global" && (
 							<div className="space-y-2">
 								<Label htmlFor="scope_id">
-									{scope === "team" ? "Team" : scope === "customer" ? "Customer" : "Virtual Key"} <span className="text-red-500">*</span>
+									{t(`routingRules.scopes.${scope}`, { defaultValue: scope })} <span className="text-red-500">*</span>
 								</Label>
 								{scope === "team" && teamsData.teams.length > 0 && (
 									<ComboboxSelect
 										options={teamsData.teams.map((team) => ({ label: team.name, value: team.id }))}
 										value={scopeId || null}
 										onValueChange={(value) => setValue("scope_id", value ?? "")}
-										placeholder="Select a team..."
+										placeholder={t("routingRules.sheet.fields.selectTeam")}
 										noPortal
 									/>
 								)}
@@ -390,7 +398,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 										options={customersData.customers.map((customer) => ({ label: customer.name, value: customer.id }))}
 										value={scopeId || null}
 										onValueChange={(value) => setValue("scope_id", value ?? "")}
-										placeholder="Select a customer..."
+										placeholder={t("routingRules.sheet.fields.selectCustomer")}
 										noPortal
 									/>
 								)}
@@ -399,7 +407,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 										options={vksData.virtual_keys.map((vk) => ({ label: vk.name, value: vk.id }))}
 										value={scopeId || null}
 										onValueChange={(value) => setValue("scope_id", value ?? "")}
-										placeholder="Select a virtual key..."
+										placeholder={t("routingRules.sheet.fields.selectVirtualKey")}
 										noPortal
 									/>
 								)}
@@ -407,7 +415,9 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									(scope === "customer" && customersData.customers.length === 0) ||
 									(scope === "virtual_key" && vksData.virtual_keys.length === 0)) && (
 									<p className="text-muted-foreground text-sm">
-										No {scope === "team" ? "teams" : scope === "customer" ? "customers" : "virtual keys"} available
+										{t("routingRules.sheet.empty.noScopeEntities", {
+											entity: t(`routingRules.scopeEntities.${scope}`, { defaultValue: scope }),
+										})}
 									</p>
 								)}
 								{errors.scope_id && <p className="text-destructive text-sm">{errors.scope_id.message}</p>}
@@ -418,10 +428,8 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 
 						{/* CEL Rule Builder */}
 						<div className="space-y-3">
-							<Label>Rule Builder</Label>
-							<p className="text-muted-foreground text-sm">
-								Build conditions to determine when this rule should apply. Leave empty to apply this rule to all requests.
-							</p>
+							<Label>{t("routingRules.sheet.builder.title")}</Label>
+							<p className="text-muted-foreground text-sm">{t("routingRules.sheet.builder.description")}</p>
 							<CELRuleBuilder
 								key={builderKey}
 								initialQuery={query}
@@ -432,23 +440,21 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 							/>
 						</div>
 
-						{/* Note about Token/Request Limits and Budget Configuration */}
+						{/* Token、Request 和预算配置说明 */}
 						<p className="text-muted-foreground text-xs">
-							Note: Ensure token limits, request limits, and budget are configured in{" "}
-							<strong>Model Providers → Configurations → {"{provider}"} → Governance</strong> (provider-level) or{" "}
-							<strong>Model Providers → Budgets & Limits</strong> section (model-level) before using them in routing rules.
+							{t("routingRules.sheet.note.prefix")} <strong>{t("routingRules.sheet.note.providerPath")}</strong>{" "}
+							{t("routingRules.sheet.note.middle")} <strong>{t("routingRules.sheet.note.modelPath")}</strong>{" "}
+							{t("routingRules.sheet.note.suffix")}
 						</p>
 
 						<Separator />
 
-						{/* Routing Targets */}
+						{/* 路由目标 */}
 						<div className="space-y-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<Label>Routing Targets</Label>
-									<p className="text-muted-foreground mt-0.5 text-xs">
-										Weights must sum to 1. Leave provider or model empty to use the incoming request value.
-									</p>
+									<Label>{t("routingRules.sheet.targets.title")}</Label>
+									<p className="text-muted-foreground mt-0.5 text-xs">{t("routingRules.sheet.targets.description")}</p>
 								</div>
 								<Button
 									type="button"
@@ -459,7 +465,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									data-testid="routing-rule-target-add"
 								>
 									<Plus className="h-4 w-4" />
-									Add Target
+									{t("routingRules.sheet.targets.add")}
 								</Button>
 							</div>
 
@@ -478,12 +484,14 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 								))}
 							</div>
 
-							{/* Weight sum indicator */}
+							{/* 权重合计提示 */}
 							<div
 								className={`flex items-center justify-end gap-2 text-xs font-medium ${Math.abs(totalWeight - 1) > 0.001 ? "text-destructive" : "text-muted-foreground"}`}
 							>
-								Total weight: {totalWeight.toFixed(4)}
-								{Math.abs(totalWeight - 1) > 0.001 && <span className="text-destructive">(must equal 1)</span>}
+								{t("routingRules.sheet.targets.totalWeight", { weight: totalWeight.toFixed(4) })}
+								{Math.abs(totalWeight - 1) > 0.001 && (
+									<span className="text-destructive">{t("routingRules.sheet.targets.mustEqualOne")}</span>
+								)}
 							</div>
 						</div>
 
@@ -491,10 +499,8 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 						<div className="space-y-3">
 							<div className="flex items-center justify-between">
 								<div>
-									<Label>Fallbacks</Label>{" "}
-									<p className="text-muted-foreground mt-0.5 text-xs">
-										Provider is required, but model is optional. Leave model empty to use the incoming request value.
-									</p>
+									<Label>{t("routingRules.sheet.fallbacks.title")}</Label>{" "}
+									<p className="text-muted-foreground mt-0.5 text-xs">{t("routingRules.sheet.fallbacks.description")}</p>
 								</div>
 								<Button
 									type="button"
@@ -504,15 +510,15 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									className="gap-2"
 								>
 									<Plus className="h-4 w-4" />
-									Add Fallback
+									{t("routingRules.sheet.fallbacks.add")}
 								</Button>
 							</div>
 							<div className="space-y-2">
 								{(fallbacks || []).length === 0 ? (
-									<p className="text-muted-foreground text-sm">No fallbacks configured</p>
+									<p className="text-muted-foreground text-sm">{t("routingRules.sheet.fallbacks.noneConfigured")}</p>
 								) : (
 									(fallbacks || []).map((fallback, index) => {
-										// Parse provider/model from fallback string
+										// 从 fallback 字符串解析 Provider/Model
 										const parts = fallback.split("/");
 										const fbProvider = parts[0] || "";
 										const fbModel = parts[1] || "";
@@ -545,7 +551,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 														options={providerOptions}
 														value={fbProvider || null}
 														onValueChange={(value) => handleProviderChange(value ?? "")}
-														placeholder="Select provider..."
+														placeholder={t("routingRules.sheet.fallbacks.selectProvider")}
 														className="h-9"
 														noPortal
 													/>
@@ -555,7 +561,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 														provider={fbProvider || undefined}
 														value={fbModel}
 														onChange={handleModelChange}
-														placeholder="Incoming (optional)"
+														placeholder={t("routingRules.sheet.placeholders.incomingOptional")}
 														isSingleSelect
 														disabled={!fbProvider}
 														className="!h-9 !min-h-9 w-full"
@@ -567,7 +573,7 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 													size="sm"
 													onClick={handleRemove}
 													className="h-9 px-2"
-													aria-label={`Remove fallback ${index + 1}`}
+													aria-label={t("routingRules.sheet.fallbacks.removeAria", { index: index + 1 })}
 												>
 													<Trash2 className="h-4 w-4" />
 												</Button>
@@ -576,16 +582,16 @@ export function RoutingRuleSheet({ open, onOpenChange, editingRule, onSuccess }:
 									})
 								)}
 							</div>
-							<p className="text-muted-foreground text-xs">Fallbacks will be used in the order they are defined</p>
+							<p className="text-muted-foreground text-xs">{t("routingRules.sheet.fallbacks.orderHint")}</p>
 						</div>
 					</div>
-					{/* Action Buttons */}
+					{/* 操作按钮 */}
 					<div className="bg-card sticky bottom-0 flex justify-end gap-3 border-t px-8 py-4">
 						<Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
-							Cancel
+							{t("common.actions.cancel")}
 						</Button>
 						<Button type="submit" disabled={isLoading || !hasRequiredAccess}>
-							{isEditing ? "Update Rule" : "Save Rule"}
+							{isEditing ? t("routingRules.sheet.actions.updateRule") : t("routingRules.sheet.actions.saveRule")}
 						</Button>
 					</div>
 				</form>
@@ -605,6 +611,7 @@ interface TargetRowProps {
 }
 
 function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpdate, onRemove }: TargetRowProps) {
+	const { t } = useTranslation();
 	const availableKeys = target.provider
 		? allKeys.filter((k) => k.provider === target.provider).map((k) => ({ id: k.key_id, name: k.name }))
 		: [];
@@ -612,11 +619,13 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 	return (
 		<div className="space-y-3 rounded-lg border p-3" data-testid={`routing-target-${index}`}>
 			<div className="flex items-center justify-between">
-				<span className="text-muted-foreground text-sm font-medium">Target {index + 1}</span>
+				<span className="text-muted-foreground text-sm font-medium">
+					{t("routingRules.sheet.targets.targetLabel", { index: index + 1 })}
+				</span>
 				<div className="flex items-center gap-2">
 					<div className="flex items-center gap-1.5">
 						<Label htmlFor={`routing-target-${index}-weight-input`} className="text-muted-foreground shrink-0 text-xs">
-							Weight
+							{t("routingRules.sheet.fields.weight")}
 						</Label>
 						<Input
 							id={`routing-target-${index}-weight-input`}
@@ -637,7 +646,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 							size="sm"
 							onClick={() => onRemove(index)}
 							className="h-8 w-8 p-0"
-							aria-label={`Remove target ${index + 1}`}
+							aria-label={t("routingRules.sheet.targets.removeAria", { index: index + 1 })}
 							data-testid={`routing-target-${index}-remove-button`}
 						>
 							<Trash2 className="h-3.5 w-3.5" />
@@ -649,7 +658,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 			<div className="grid grid-cols-2 gap-3">
 				<div className="space-y-1.5">
 					<Label id={`routing-target-${index}-provider-label`} className="text-xs">
-						Provider
+						{t("routingRules.sheet.fields.provider")}
 					</Label>
 					<div className="flex gap-1.5">
 						<ComboboxSelect
@@ -660,7 +669,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								onUpdate(index, "model", "");
 								onUpdate(index, "key_id", "");
 							}}
-							placeholder="Incoming (optional)"
+							placeholder={t("routingRules.sheet.placeholders.incomingOptional")}
 							className="h-9 flex-1 text-sm"
 							data-testid={`routing-target-${index}-provider-select`}
 							noPortal
@@ -676,7 +685,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 									onUpdate(index, "key_id", "");
 								}}
 								className="h-9 w-9 p-0"
-								aria-label={`Clear provider for target ${index + 1}`}
+								aria-label={t("routingRules.sheet.targets.clearProviderAria", { index: index + 1 })}
 								data-testid={`routing-target-${index}-provider-clear`}
 							>
 								<X className="h-3.5 w-3.5" />
@@ -687,7 +696,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 
 				<div className="space-y-1.5">
 					<Label id={`routing-target-${index}-model-label`} className="text-xs">
-						Model
+						{t("routingRules.sheet.fields.model")}
 					</Label>
 					<div className="flex gap-1.5">
 						<div className="flex-1" data-testid={`routing-target-${index}-model-select`}>
@@ -695,7 +704,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								provider={target.provider || undefined}
 								value={target.model}
 								onChange={(value) => onUpdate(index, "model", value)}
-								placeholder="Incoming (optional)"
+								placeholder={t("routingRules.sheet.placeholders.incomingOptional")}
 								isSingleSelect
 								loadModelsOnEmptyProvider
 								className="!h-9 !min-h-9"
@@ -710,7 +719,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								size="sm"
 								onClick={() => onUpdate(index, "model", "")}
 								className="h-9 w-9 p-0"
-								aria-label={`Clear model for target ${index + 1}`}
+								aria-label={t("routingRules.sheet.targets.clearModelAria", { index: index + 1 })}
 								data-testid={`routing-target-${index}-model-clear`}
 							>
 								<X className="h-3.5 w-3.5" />
@@ -723,7 +732,8 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 			{target.provider && (availableKeys.length > 0 || target.key_id) && (
 				<div className="space-y-1.5">
 					<Label id={`routing-target-${index}-apikey-label`} className="text-xs">
-						API Key <span className="text-muted-foreground">(optional — leave unset for load-balanced selection)</span>
+						{t("routingRules.sheet.fields.apiKey")}{" "}
+						<span className="text-muted-foreground">{t("routingRules.sheet.fields.apiKeyHint")}</span>
 					</Label>
 					<div className="flex gap-1.5">
 						<Select value={target.key_id || ""} onValueChange={(value) => onUpdate(index, "key_id", value)}>
@@ -733,7 +743,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								className="h-9 flex-1 text-sm"
 								data-testid={`routing-target-${index}-apikey-select`}
 							>
-								<SelectValue placeholder="Select key (optional)" />
+								<SelectValue placeholder={t("routingRules.sheet.fields.selectKeyOptional")} />
 							</SelectTrigger>
 							<SelectContent>
 								{availableKeys.map((key) => (
@@ -743,7 +753,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								))}
 								{target.key_id && !availableKeys.some((k) => k.id === target.key_id) && (
 									<SelectItem key={`pinned-${target.key_id}`} value={target.key_id}>
-										(pinned) {target.key_id}
+										{t("routingRules.sheet.fields.pinnedKey", { keyId: target.key_id })}
 									</SelectItem>
 								)}
 							</SelectContent>
@@ -755,7 +765,7 @@ function TargetRow({ target, index, providerOptions, allKeys, showRemove, onUpda
 								size="sm"
 								onClick={() => onUpdate(index, "key_id", "")}
 								className="h-9 w-9 p-0"
-								aria-label={`Clear API key for target ${index + 1}`}
+								aria-label={t("routingRules.sheet.targets.clearApiKeyAria", { index: index + 1 })}
 								data-testid={`routing-target-${index}-apikey-clear`}
 							>
 								<X className="h-3.5 w-3.5" />

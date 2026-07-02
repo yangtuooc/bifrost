@@ -6,6 +6,7 @@ import type { ModelHistogramResponse, ModelRankingEntry, ModelRankingsResponse }
 import { COMPACT_NUMBER_FORMAT, formatCompactNumber as formatNumber } from "@/lib/utils/numbers";
 import NumberFlow from "@number-flow/react";
 import { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
 	formatFullTimestamp,
@@ -37,15 +38,13 @@ function formatLatency(ms: number): string {
 	return `${ms.toFixed(0)}ms`;
 }
 
-const UNNAMED_MODEL_LABEL = "(unnamed)";
-
-function displayModelLabel(model: string): string {
+function displayModelLabel(model: string, unnamedLabel: string): string {
 	if (model === OTHER_SERIES_KEY) return OTHER_SERIES_LABEL;
-	return model === "" ? UNNAMED_MODEL_LABEL : model;
+	return model === "" ? unnamedLabel : model;
 }
 
-// Tooltip for the usage share chart
-function UsageShareTooltip({ active, payload, models }: any) {
+// 用量占比图表的 tooltip
+function UsageShareTooltip({ active, payload, models, unnamedLabel }: any) {
 	if (!active || !payload || !payload.length) return null;
 	const data = payload[0]?.payload;
 	if (!data) return null;
@@ -64,7 +63,7 @@ function UsageShareTooltip({ active, payload, models }: any) {
 							<span className="flex items-center gap-1.5">
 								<span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOther ? OTHER_SERIES_COLOR : getModelColor(idx) }} />
 								<span className={`max-w-[140px] truncate text-zinc-600 dark:text-zinc-400${isUnnamed ? " italic" : ""}`}>
-									{displayModelLabel(model)}
+									{displayModelLabel(model, unnamedLabel)}
 								</span>
 							</span>
 							<span className="font-medium">{val.toLocaleString()}</span>
@@ -76,7 +75,7 @@ function UsageShareTooltip({ active, payload, models }: any) {
 	);
 }
 
-// Top Models usage share stacked area chart + ranked legend
+// Top 模型用量图表和排行图例
 function TopModelsChart({
 	modelData,
 	loadingModels,
@@ -90,14 +89,15 @@ function TopModelsChart({
 	startTime: number;
 	endTime: number;
 }) {
+	const { t } = useTranslation();
+
 	const { chartData, displayModels } = useMemo(() => {
 		if (!modelData?.buckets || !modelData.bucket_size_seconds) {
 			return { chartData: [], displayModels: [] };
 		}
 
 		const allModels = modelData.models || [];
-		// Pick top-N by total request count, then sort the chosen labels alphabetically
-		// for legend stability. Other goes at the end.
+		// 按请求总数选择 Top-N，再按字母序稳定图例顺序；Other 放在末尾。
 		const top = pickTopSeries(modelData.buckets, allModels, (b, m) => b.by_model?.[m]?.total ?? 0);
 		const hasOther = top.length < allModels.length;
 		const sortedTop = [...top].sort((a, b) => a.localeCompare(b));
@@ -136,7 +136,7 @@ function TopModelsChart({
 		return sum;
 	}, [modelData]);
 
-	// Compute totals per model for the ranked legend (aggregate across providers)
+	// 计算每个模型的总量，用于排行图例（跨 Provider 聚合）
 	const modelTotals = useMemo(() => {
 		if (!rankingsData?.rankings) return [];
 		const byModel = new Map<string, number>();
@@ -157,11 +157,11 @@ function TopModelsChart({
 
 	return (
 		<ChartCard
-			title="Top Models"
+			title={t("dashboard.charts.topModels")}
 			loading={loadingModels}
 			testId="dashboard-rankings-top-models"
 			className="z-[1] h-full"
-			totalLabel="Total"
+			totalLabel={t("dashboard.metrics.total")}
 			total={grandTotal !== null ? <NumberFlow value={grandTotal} format={COMPACT_NUMBER_FORMAT} /> : undefined}
 			totalTooltip={grandTotal !== null ? grandTotal.toLocaleString("en-US") : undefined}
 		>
@@ -190,7 +190,10 @@ function TopModelsChart({
 									domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
 									allowDataOverflow={false}
 								/>
-								<Tooltip content={<UsageShareTooltip models={displayModels} />} cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }} />
+								<Tooltip
+									content={<UsageShareTooltip models={displayModels} unnamedLabel={t("dashboard.metrics.unnamed")} />}
+									cursor={{ fill: "#8c8c8f", fillOpacity: 0.15 }}
+								/>
 								{displayModels.map((model, idx) => (
 									<Bar
 										key={model}
@@ -207,11 +210,11 @@ function TopModelsChart({
 						</ResponsiveContainer>
 					</ChartErrorBoundary>
 				) : (
-					<div className="text-muted-foreground flex h-full items-center justify-center text-sm">No data available</div>
+					<div className="text-muted-foreground flex h-full items-center justify-center text-sm">{t("dashboard.empty.noData")}</div>
 				)}
 			</div>
 			<div className="py-2">
-				{/* Ranked model legend */}
+				{/* 模型排行图例 */}
 				{modelTotals.length > 0 && (
 					<div className="mt-3 grid grid-cols-2 gap-x-8 gap-y-1.5 px-2 pb-1">
 						{modelTotals.map((m, idx) => (
@@ -233,6 +236,7 @@ function TopModelsChart({
 }
 
 function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels, startTime, endTime }: ModelRankingsTabProps) {
+	const { t } = useTranslation();
 	const [sortField, setSortField] = useState<SortField>("total_requests");
 	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -279,20 +283,20 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 			) : !rankingsData?.rankings?.length ? (
 				<Card className="rounded-sm p-4 shadow-none">
 					<div className="text-muted-foreground flex h-[200px] items-center justify-center text-sm">
-						No model usage data available for this time period.
+						{t("dashboard.empty.noModelUsageForPeriod")}
 					</div>
 				</Card>
 			) : (
 				<Card className="rounded-sm p-2 shadow-none" data-testid="dashboard-model-rankings-table">
-					<span className="text-primary pl-2 text-sm font-medium">Model Rankings</span>
+					<span className="text-primary pl-2 text-sm font-medium">{t("dashboard.tabs.modelRankings")}</span>
 					<Table>
 						<TableHeader>
 							<TableRow>
 								<TableHead className="w-12">#</TableHead>
-								<TableHead>Model</TableHead>
+								<TableHead>{t("dashboard.table.model")}</TableHead>
 								<TableHead className="text-right">
 									<SortableHeader
-										label="Requests"
+										label={t("dashboard.metrics.requests")}
 										field="total_requests"
 										currentSort={sortField}
 										currentOrder={sortOrder}
@@ -301,7 +305,7 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 								</TableHead>
 								<TableHead className="text-right">
 									<SortableHeader
-										label="Success Rate"
+										label={t("dashboard.table.successRate")}
 										field="success_rate"
 										currentSort={sortField}
 										currentOrder={sortOrder}
@@ -310,7 +314,7 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 								</TableHead>
 								<TableHead className="text-right">
 									<SortableHeader
-										label="Tokens"
+										label={t("dashboard.metrics.tokens")}
 										field="total_tokens"
 										currentSort={sortField}
 										currentOrder={sortOrder}
@@ -318,11 +322,17 @@ function ModelRankingsTabImpl({ rankingsData, loading, modelData, loadingModels,
 									/>
 								</TableHead>
 								<TableHead className="text-right">
-									<SortableHeader label="Cost" field="total_cost" currentSort={sortField} currentOrder={sortOrder} onSort={handleSort} />
+									<SortableHeader
+										label={t("dashboard.charts.cost")}
+										field="total_cost"
+										currentSort={sortField}
+										currentOrder={sortOrder}
+										onSort={handleSort}
+									/>
 								</TableHead>
 								<TableHead className="text-right">
 									<SortableHeader
-										label="Avg Latency"
+										label={t("dashboard.table.avgLatency")}
 										field="avg_latency"
 										currentSort={sortField}
 										currentOrder={sortOrder}

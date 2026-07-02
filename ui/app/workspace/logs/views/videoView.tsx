@@ -2,6 +2,8 @@ import { ExternalLink, Video } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { BifrostVideoDownloadOutput, BifrostVideoGenerationOutput, BifrostVideoListOutput } from "@/lib/types/logs";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import CollapsibleBox from "./collapsibleBox";
 import { CodeEditor } from "@/components/ui/codeEditor";
@@ -19,18 +21,19 @@ interface VideoViewProps {
 	requestType?: string;
 }
 
-function getMethodTypeLabel(requestType?: string): string {
-	if (!requestType) return "Video";
+function getMethodTypeLabel(requestType: string | undefined, t: TFunction): string {
+	if (!requestType) return t("logs.details.requestTypes.video");
 	const normalized = requestType.toLowerCase();
-	if (normalized.includes("video_download")) return "Video Download";
-	if (normalized.includes("video_retrieve")) return "Video Retrieve";
-	if (normalized.includes("video_generation")) return "Video Generation";
-	if (normalized.includes("video_list")) return "Video List";
-	return "Video";
+	if (normalized.includes("video_download")) return t("logs.details.requestTypes.videoDownload");
+	if (normalized.includes("video_retrieve")) return t("logs.details.requestTypes.videoRetrieve");
+	if (normalized.includes("video_generation")) return t("logs.details.requestTypes.videoGeneration");
+	if (normalized.includes("video_list")) return t("logs.details.requestTypes.videoList");
+	return t("logs.details.requestTypes.video");
 }
 
 export default function VideoView({ videoInput, videoOutput, videoListOutput, requestType }: VideoViewProps) {
-	const methodTypeLabel = getMethodTypeLabel(requestType);
+	const { t } = useTranslation();
+	const methodTypeLabel = getMethodTypeLabel(requestType, t);
 	const isDownload = requestType?.toLowerCase().includes("video_download");
 	const downloadOutput = isDownload && videoOutput ? (videoOutput as BifrostVideoDownloadOutput) : null;
 	const generationOutput = !isDownload && videoOutput ? (videoOutput as BifrostVideoGenerationOutput) : null;
@@ -42,10 +45,10 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Video className="h-4 w-4" />
-						{methodTypeLabel} Input
+						{t("logs.details.sections.inputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-2 p-6">
-						<div className="text-muted-foreground text-xs font-medium">PROMPT</div>
+						<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.prompt")}</div>
 						<div className="font-mono text-xs">{videoInput.prompt}</div>
 					</div>
 				</div>
@@ -55,7 +58,7 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Video className="h-4 w-4" />
-						{methodTypeLabel} Output
+						{t("logs.details.sections.outputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-3 p-6">
 						{downloadOutput ? (
@@ -63,25 +66,25 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 								<div className="grid grid-cols-3 gap-3">
 									{downloadOutput.video_id && (
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-xs font-medium">VIDEO ID</div>
+											<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.videoId")}</div>
 											<div className="font-mono text-xs break-all">{downloadOutput.video_id}</div>
 										</div>
 									)}
 									{downloadOutput.content_type && (
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-xs font-medium">CONTENT TYPE</div>
+											<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.contentType")}</div>
 											<div className="font-mono text-xs">{downloadOutput.content_type}</div>
 										</div>
 									)}
 								</div>
-								<p className="text-muted-foreground text-xs">Video content was successfully downloaded (content is not stored in logs)</p>
+								<p className="text-muted-foreground text-xs">{t("logs.details.media.videoDownloadNotStored")}</p>
 							</>
 						) : generationOutput ? (
 							<>
 								<div className="grid grid-cols-3 gap-3">
 									{generationOutput.status && (
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-xs font-medium">STATUS</div>
+											<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.status")}</div>
 											<Badge variant="secondary" className="uppercase">
 												{generationOutput.status}
 											</Badge>
@@ -89,13 +92,13 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 									)}
 									{generationOutput.progress !== undefined && (
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-xs font-medium">PROGRESS</div>
+											<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.progress")}</div>
 											<div className="font-mono text-xs">{generationOutput.progress}%</div>
 										</div>
 									)}
 									{generationOutput.id && (
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-xs font-medium">VIDEO ID</div>
+											<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.videoId")}</div>
 											<div className="font-mono text-xs break-all">{generationOutput.id}</div>
 										</div>
 									)}
@@ -104,7 +107,7 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 								{generationOutput.error && (generationOutput.error.message || generationOutput.error.code) && (
 									<div className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
 										<div className="space-y-1">
-											<div className="text-muted-foreground font-medium">Error from provider</div>
+											<div className="text-muted-foreground font-medium">{t("logs.details.labels.providerError")}</div>
 											{generationOutput.error.code && <div className="font-medium">{generationOutput.error.code}</div>}
 											{generationOutput.error.message && <div className="text-muted-foreground">{generationOutput.error.message}</div>}
 										</div>
@@ -122,7 +125,7 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 											rel="noopener noreferrer"
 											className="text-primary inline-flex items-center gap-1 text-xs underline"
 										>
-											Open video URL
+											{t("logs.details.actions.openVideoUrl")}
 											<ExternalLink className="h-3 w-3" />
 										</a>
 									</div>
@@ -135,7 +138,7 @@ export default function VideoView({ videoInput, videoOutput, videoListOutput, re
 
 			{videoListOutput && (
 				<CollapsibleBox
-					title={`Video List Output (${videoListOutput.data?.length ?? 0})`}
+					title={t("logs.details.sections.videoListOutput", { count: videoListOutput.data?.length ?? 0 })}
 					onCopy={() => JSON.stringify(videoListOutput, null, 2)}
 				>
 					<CodeEditor

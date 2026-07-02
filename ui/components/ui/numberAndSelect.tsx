@@ -3,6 +3,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { cleanNumericInput } from "@/lib/utils/strings";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+const resetDurationLabelKeys: Record<string, string> = {
+	"1m": "common.resetDurations.everyMinute",
+	"5m": "common.resetDurations.everyFiveMinutes",
+	"15m": "common.resetDurations.everyFifteenMinutes",
+	"30m": "common.resetDurations.everyThirtyMinutes",
+	"1h": "common.resetDurations.hourly",
+	"6h": "common.resetDurations.everySixHours",
+	"1d": "common.resetDurations.daily",
+	"1w": "common.resetDurations.weekly",
+	"1M": "common.resetDurations.monthly",
+};
+
+const formatOptionLabel = (option: { label: string; value: string }, t: Translate) => {
+	const labelKey = resetDurationLabelKeys[option.value];
+	return labelKey ? t(labelKey) : option.label;
+};
 
 const NumberAndSelect = ({
 	id,
@@ -29,12 +49,12 @@ const NumberAndSelect = ({
 	dataTestId?: string;
 	inputClassName?: string;
 }) => {
-	// Internal string state to allow intermediate inputs like "0." or ""
+	const { t } = useTranslation();
+
+	// 保留字符串态，允许用户输入 "0." 或空值这类中间状态。
 	const [displayValue, setDisplayValue] = useState(value !== undefined ? String(value) : "");
 
-	// Sync from prop when it changes externally (e.g. loading saved data).
-	// displayValue is intentionally omitted from deps — we only want to update
-	// when the external `value` prop changes, not on every keystroke.
+	// 仅在外部 value 变化时同步，避免每次按键都覆盖输入态。
 	useEffect(() => {
 		const displayNum = displayValue === "" ? undefined : parseFloat(displayValue);
 		if (value !== displayNum) {
@@ -98,7 +118,7 @@ const NumberAndSelect = ({
 			<div className="grow space-y-2">{numberInput}</div>
 			<div className="w-40 space-y-2">
 				<Label htmlFor={`${id}-select`} className={labelClassName}>
-					Reset Period
+					{t("common.forms.resetPeriod")}
 				</Label>
 				<Select value={selectValue} onValueChange={(value) => onChangeSelect(value as string)}>
 					<SelectTrigger className="m-0 w-full">
@@ -109,7 +129,7 @@ const NumberAndSelect = ({
 							.filter((option) => option.value)
 							.map((option) => (
 								<SelectItem key={option.value} value={option.value}>
-									{option.label}
+									{formatOptionLabel(option, t)}
 								</SelectItem>
 							))}
 					</SelectContent>

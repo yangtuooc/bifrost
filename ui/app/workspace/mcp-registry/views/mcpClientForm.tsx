@@ -18,6 +18,7 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Info } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { MCPHeadersAuthorizer } from "./mcpHeadersAuthorizer";
 import { OAuth2Authorizer } from "./oauth2Authorizer";
 
@@ -57,6 +58,7 @@ const emptyForm: CreateMCPClientRequest = {
 const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 	const hasCreateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Create);
 	const { toast } = useToast();
+	const { t } = useTranslation();
 	const [createMCPClient] = useCreateMCPClientMutation();
 
 	const [isLoading, setIsLoading] = useState(false);
@@ -136,7 +138,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 	if ((connectionType === "http" || connectionType === "sse") && (authType === "headers" || authType === "per_user_headers") && headers) {
 		for (const [key, secretVar] of Object.entries(headers)) {
 			if (!secretVar.value && !secretVar.ref) {
-				headersValidationError = `Header "${key}" must have a value`;
+				headersValidationError = t("mcpRegistry.form.validation.headerMissingValue", { key });
 				break;
 			}
 		}
@@ -166,11 +168,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 			const connRef = data.connection_string?.ref?.trim() || "";
 			const isSecret = data.connection_string?.type === "env" || data.connection_string?.type === "vault";
 			if (!connVal && !connRef) {
-				setError("connection_string", { message: "Connection URL is required" });
+				setError("connection_string", { message: t("mcpRegistry.form.validation.connectionUrlRequired") });
 				hasErrors = true;
 			} else if (!isSecret && connVal && !/^https?:\/\/.+/.test(connVal)) {
 				setError("connection_string", {
-					message: "Connection URL must start with http:// or https://",
+					message: t("mcpRegistry.form.validation.connectionUrlProtocol"),
 				});
 				hasErrors = true;
 			}
@@ -179,25 +181,25 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		if (connectionType === "stdio") {
 			const cmd = data.stdio_config?.command || "";
 			if (!cmd.trim()) {
-				setError("stdio_config.command", { message: "Command is required for STDIO connections" });
+				setError("stdio_config.command", { message: t("mcpRegistry.form.validation.commandRequired") });
 				hasErrors = true;
 			} else if (/[<>|&;]/.test(cmd)) {
-				setError("stdio_config.command", { message: "Command cannot contain special shell characters" });
+				setError("stdio_config.command", { message: t("mcpRegistry.form.validation.commandSpecialChars") });
 				hasErrors = true;
 			}
 		}
 
 		if (authType === "oauth" || authType === "per_user_oauth") {
 			if (data.oauth_config?.authorize_url && !/^https?:\/\/.+$/.test(data.oauth_config.authorize_url)) {
-				setError("oauth_config.authorize_url", { message: "Authorize URL must start with http:// or https://" });
+				setError("oauth_config.authorize_url", { message: t("mcpRegistry.form.validation.authorizeUrlProtocol") });
 				hasErrors = true;
 			}
 			if (data.oauth_config?.token_url && !/^https?:\/\/.+$/.test(data.oauth_config.token_url)) {
-				setError("oauth_config.token_url", { message: "Token URL must start with http:// or https://" });
+				setError("oauth_config.token_url", { message: t("mcpRegistry.form.validation.tokenUrlProtocol") });
 				hasErrors = true;
 			}
 			if (data.oauth_config?.registration_url && !/^https?:\/\/.+$/.test(data.oauth_config.registration_url)) {
-				setError("oauth_config.registration_url", { message: "Registration URL must start with http:// or https://" });
+				setError("oauth_config.registration_url", { message: t("mcpRegistry.form.validation.registrationUrlProtocol") });
 				hasErrors = true;
 			}
 		}
@@ -205,8 +207,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		if (authType === "per_user_headers") {
 			if (perUserHeaderKeys.length === 0) {
 				toast({
-					title: "Header keys required",
-					description: "Declare at least one header name users must supply.",
+					title: t("mcpRegistry.form.toasts.headerKeysRequiredTitle"),
+					description: t("mcpRegistry.form.toasts.headerKeysRequiredDescription"),
 					variant: "destructive",
 				});
 				hasErrors = true;
@@ -287,7 +289,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 				});
 			} else {
 				setIsLoading(false);
-				toast({ title: "Success", description: "Server created" });
+				toast({ title: t("common.status.success"), description: t("mcpRegistry.form.toasts.serverCreated") });
 				onSaved();
 				onClose();
 			}
@@ -297,7 +299,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 				setError("name", { message: getErrorMessage(error) });
 				return;
 			}
-			toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
+			toast({ title: t("mcpRegistry.toasts.errorTitle"), description: getErrorMessage(error), variant: "destructive" });
 		}
 	};
 
@@ -305,8 +307,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 		<Sheet open={open} onOpenChange={(open) => !open && !oauthFlow && onClose()}>
 			<SheetContent className="flex w-full flex-col overflow-x-hidden px-0">
 				<SheetHeader className="flex flex-col items-start px-7 pt-8">
-					<SheetTitle>New MCP Server</SheetTitle>
-					<SheetDescription>Configure and connect to a new Model Context Protocol server.</SheetDescription>
+					<SheetTitle>{t("mcpRegistry.form.title")}</SheetTitle>
+					<SheetDescription>{t("mcpRegistry.form.description")}</SheetDescription>
 				</SheetHeader>
 
 				<Form {...methods}>
@@ -317,19 +319,25 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 								control={control}
 								name="name"
 								rules={{
-									required: "Server name is required",
-									minLength: { value: 3, message: "Server name must be at least 3 characters" },
-									maxLength: { value: 50, message: "Server name cannot exceed 50 characters" },
+									required: t("mcpRegistry.form.validation.nameRequired"),
+									minLength: { value: 3, message: t("mcpRegistry.form.validation.nameMinLength") },
+									maxLength: { value: 50, message: t("mcpRegistry.form.validation.nameMaxLength") },
 									validate: {
-										format: (v) => /^[a-zA-Z0-9_]+$/.test(v) || "Server name can only contain letters, numbers, and underscores",
-										noLeadingDigit: (v) => !/^[0-9]/.test(v) || "Server name cannot start with a number",
+										format: (v) => /^[a-zA-Z0-9_]+$/.test(v) || t("mcpRegistry.form.validation.nameFormat"),
+										noLeadingDigit: (v) => !/^[0-9]/.test(v) || t("mcpRegistry.form.validation.nameNoLeadingDigit"),
 									},
 								}}
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Name</FormLabel>
+										<FormLabel>{t("mcpRegistry.form.fields.name")}</FormLabel>
 										<FormControl>
-											<Input id="client-name" data-testid="client-name-input" placeholder="Server name" maxLength={50} {...field} />
+											<Input
+												id="client-name"
+												data-testid="client-name-input"
+												placeholder={t("mcpRegistry.form.fields.serverNamePlaceholder")}
+												maxLength={50}
+												{...field}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -342,7 +350,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 								name="connection_type"
 								render={({ field }) => (
 									<FormItem className="w-full">
-										<FormLabel>Connection Type</FormLabel>
+										<FormLabel>{t("mcpRegistry.form.fields.connectionType")}</FormLabel>
 										<Select
 											value={field.value}
 											onValueChange={(value: MCPConnectionType) => {
@@ -357,7 +365,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 										>
 											<FormControl>
 												<SelectTrigger className="w-full" data-testid="connection-type-select">
-													<SelectValue placeholder="Select connection type" />
+													<SelectValue placeholder={t("mcpRegistry.form.fields.selectConnectionType")} />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
@@ -372,7 +380,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 												</SelectItem>
 											</SelectContent>
 										</Select>
-										<p className="text-muted-foreground text-xs">Connection type and authentication settings cannot be changed later.</p>
+										<p className="text-muted-foreground text-xs">{t("mcpRegistry.form.fields.connectionSettingsLocked")}</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -385,7 +393,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 								render={({ field }) => (
 									<div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
 										<div className="flex items-center gap-2">
-											<Label htmlFor="code-mode">Code Mode Server</Label>
+											<Label htmlFor="code-mode">{t("mcpRegistry.form.fields.codeModeServer")}</Label>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild>
@@ -395,13 +403,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 															rel="noopener noreferrer"
 															data-testid="code-mode-link-help"
 															className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded focus-visible:ring-2 focus-visible:outline-none"
-															aria-label="Learn more about Code Mode"
+															aria-label={t("mcpRegistry.form.fields.codeModeLearnMoreAria")}
 														>
 															<Info className="h-4 w-4 cursor-help" />
 														</a>
 													</TooltipTrigger>
 													<TooltipContent>
-														<p>Click to learn more about Code Mode</p>
+														<p>{t("mcpRegistry.form.fields.codeModeTooltip")}</p>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
@@ -418,17 +426,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 								render={({ field }) => (
 									<div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
 										<div className="flex items-center gap-2">
-											<Label htmlFor="ping-available">Ping Available for Health Check</Label>
+											<Label htmlFor="ping-available">{t("mcpRegistry.form.fields.pingAvailable")}</Label>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild>
 														<Info className="text-muted-foreground h-4 w-4 cursor-help" />
 													</TooltipTrigger>
 													<TooltipContent className="max-w-xs">
-														<p>
-															Enable to use lightweight ping method for health checks. Disable if your MCP server doesn't support ping -
-															will use listTools instead.
-														</p>
+														<p>{t("mcpRegistry.form.fields.pingTooltip")}</p>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
@@ -451,7 +456,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 										name="connection_string"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Connection URL</FormLabel>
+												<FormLabel>{t("mcpRegistry.form.fields.connectionUrl")}</FormLabel>
 												<SecretVarInput
 													value={field.value}
 													onChange={(value) => {
@@ -468,19 +473,19 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 
 									{/* Auth Type */}
 									<FormItem className="w-full">
-										<FormLabel>Authentication Type</FormLabel>
+										<FormLabel>{t("mcpRegistry.form.fields.authType")}</FormLabel>
 										<Select value={authKind} onValueChange={(value: "none" | "headers" | "oauth") => applyAuthKind(value)}>
 											<FormControl>
 												<SelectTrigger className="w-full" data-testid="auth-type-select">
-													<SelectValue placeholder="Select authentication type" />
+													<SelectValue placeholder={t("mcpRegistry.form.fields.selectAuthType")} />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
 												<SelectItem value="none" data-testid="auth-type-none">
-													None
+													{t("mcpRegistry.auth.none")}
 												</SelectItem>
 												<SelectItem value="headers" data-testid="auth-type-headers">
-													Headers
+													{t("mcpRegistry.auth.headers")}
 												</SelectItem>
 												<SelectItem value="oauth" data-testid="auth-type-oauth">
 													OAuth 2.0
@@ -492,19 +497,19 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 									{/* Auth Scope — only meaningful when there's an auth flow */}
 									{authKind !== "none" && (
 										<FormItem className="w-full">
-											<FormLabel>Auth Scope</FormLabel>
+											<FormLabel>{t("mcpRegistry.form.fields.authScope")}</FormLabel>
 											<Select value={authScope} onValueChange={(value: "shared" | "per_user") => applyAuthScope(value)}>
 												<FormControl>
 													<SelectTrigger className="w-full" data-testid="auth-scope-select">
-														<SelectValue placeholder="Select auth scope" />
+														<SelectValue placeholder={t("mcpRegistry.form.fields.selectAuthScope")} />
 													</SelectTrigger>
 												</FormControl>
 												<SelectContent>
 													<SelectItem value="shared" data-testid="auth-scope-shared">
-														Shared
+														{t("mcpRegistry.auth.shared")}
 													</SelectItem>
 													<SelectItem value="per_user" data-testid="auth-scope-per-user">
-														Per-User
+														{t("mcpRegistry.auth.perUser")}
 													</SelectItem>
 												</SelectContent>
 											</Select>
@@ -520,9 +525,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 													<HeadersTable
 														value={field.value || {}}
 														onChange={field.onChange}
-														keyPlaceholder="Header name"
-														valuePlaceholder="Header value"
-														label="Headers"
+														keyPlaceholder={t("mcpRegistry.form.fields.headerName")}
+														valuePlaceholder={t("mcpRegistry.form.fields.headerValue")}
+														label={t("mcpRegistry.form.fields.headers")}
 														useSecretVarInput
 													/>
 													{headersValidationError && <p className="text-destructive text-xs">{headersValidationError}</p>}
@@ -541,17 +546,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 											    tool use via the inline auth landing page. */}
 											<div className="space-y-1">
 												<div className="space-y-0.5">
-													<div className="text-sm font-medium">Required Headers</div>
-													<p className="text-muted-foreground text-sm">
-														Comma-separated list of header names each caller must supply when they first use this server (e.g.{" "}
-														<code>X-API-Key, X-Tenant-ID</code>). Values are submitted per user - never stored on this server config.
-													</p>
+													<div className="text-sm font-medium">{t("mcpRegistry.form.fields.requiredHeaders")}</div>
+													<p className="text-muted-foreground text-sm">{t("mcpRegistry.form.fields.requiredHeadersDescription")}</p>
 												</div>
 												<Textarea
 													id="per-user-header-keys"
 													data-testid="per-user-header-keys-textarea"
 													className="h-24"
-													placeholder="X-API-Key, X-Tenant-ID"
+													placeholder={t("mcpRegistry.form.fields.requiredHeadersPlaceholder")}
 													value={newHeaderKeyInput}
 													onChange={(e) => {
 														setNewHeaderKeyInput(e.target.value);
@@ -569,9 +571,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														<HeadersTable
 															value={field.value || {}}
 															onChange={field.onChange}
-															keyPlaceholder="Header name"
-															valuePlaceholder="Header value"
-															label="Static Headers (optional, applied alongside user values)"
+															keyPlaceholder={t("mcpRegistry.form.fields.headerName")}
+															valuePlaceholder={t("mcpRegistry.form.fields.headerValue")}
+															label={t("mcpRegistry.form.fields.staticHeaders")}
 															useSecretVarInput
 														/>
 														{headersValidationError && <p className="text-destructive text-xs">{headersValidationError}</p>}
@@ -591,7 +593,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 										<Accordion type="single" collapsible className="w-full">
 											<AccordionItem value="oauth-advanced" className="border-b-0">
 												<AccordionTrigger className="py-0" data-testid="oauth-advanced-trigger">
-													<span className="text-sm font-medium">OAuth Client Advanced Settings</span>
+													<span className="text-sm font-medium">{t("mcpRegistry.form.fields.oauthAdvanced")}</span>
 												</AccordionTrigger>
 												<AccordionContent className="space-y-4 pt-4 pb-0">
 													{/* OAuth Client ID */}
@@ -601,17 +603,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														render={({ field }) => (
 															<FormItem>
 																<div className="flex items-center gap-2">
-																	<FormLabel>OAuth Client ID (optional)</FormLabel>
+																	<FormLabel>{t("mcpRegistry.form.fields.oauthClientId")}</FormLabel>
 																	<TooltipProvider>
 																		<Tooltip>
 																			<TooltipTrigger asChild>
 																				<Info className="text-muted-foreground h-4 w-4 cursor-help" />
 																			</TooltipTrigger>
 																			<TooltipContent className="max-w-xs">
-																				<p>
-																					Leave empty to use Dynamic Client Registration (RFC 7591). Bifrost will automatically register
-																					with the OAuth provider if supported.
-																				</p>
+																				<p>{t("mcpRegistry.form.fields.oauthClientIdTooltip")}</p>
 																			</TooltipContent>
 																		</Tooltip>
 																	</TooltipProvider>
@@ -624,9 +623,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 																		data-testid="mcp-oauth-client-id"
 																	/>
 																</FormControl>
-																<p className="text-muted-foreground text-xs">
-																	Will be auto-generated via dynamic registration if left empty and provider supports it
-																</p>
+																<p className="text-muted-foreground text-xs">{t("mcpRegistry.form.fields.oauthClientIdDescription")}</p>
 																<FormMessage />
 															</FormItem>
 														)}
@@ -638,7 +635,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														name="oauth_config.client_secret"
 														render={({ field }) => (
 															<FormItem>
-																<FormLabel>OAuth Client Secret (optional for PKCE)</FormLabel>
+																<FormLabel>{t("mcpRegistry.form.fields.oauthClientSecret")}</FormLabel>
 																<FormControl>
 																	<SecretVarInput
 																		value={field.value}
@@ -649,7 +646,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 																		data-testid="mcp-oauth-client-secret"
 																	/>
 																</FormControl>
-																<p className="text-muted-foreground text-xs">Leave empty for public clients using PKCE</p>
+																<p className="text-muted-foreground text-xs">{t("mcpRegistry.form.fields.oauthClientSecretDescription")}</p>
 																<FormMessage />
 															</FormItem>
 														)}
@@ -661,7 +658,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														name="oauth_config.authorize_url"
 														render={({ field }) => (
 															<FormItem>
-																<FormLabel>Authorization URL (optional, auto-discovered)</FormLabel>
+																<FormLabel>{t("mcpRegistry.form.fields.authorizationUrl")}</FormLabel>
 																<FormControl>
 																	<Input
 																		{...field}
@@ -685,7 +682,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														name="oauth_config.token_url"
 														render={({ field }) => (
 															<FormItem>
-																<FormLabel>Token URL (optional, auto-discovered)</FormLabel>
+																<FormLabel>{t("mcpRegistry.form.fields.tokenUrl")}</FormLabel>
 																<FormControl>
 																	<Input
 																		{...field}
@@ -709,7 +706,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 														name="oauth_config.registration_url"
 														render={({ field }) => (
 															<FormItem>
-																<FormLabel>Registration URL (optional, auto-discovered)</FormLabel>
+																<FormLabel>{t("mcpRegistry.form.fields.registrationUrl")}</FormLabel>
 																<FormControl>
 																	<Input
 																		{...field}
@@ -729,7 +726,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 
 													{/* Scopes (local state, not RHF field) */}
 													<div className="space-y-2">
-														<Label>Scopes (optional, comma-separated)</Label>
+														<Label>{t("mcpRegistry.form.fields.scopes")}</Label>
 														<Input
 															value={scopesText}
 															onChange={(e) => setScopesText(e.target.value)}
@@ -746,7 +743,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 									<Accordion type="single" collapsible className="w-full">
 										<AccordionItem value="tls-config" className="border-b-0">
 											<AccordionTrigger className="py-0" data-testid="tls-config-trigger">
-												<span className="text-sm font-medium">TLS / Certificate</span>
+												<span className="text-sm font-medium">{t("mcpRegistry.form.fields.tlsCertificate")}</span>
 											</AccordionTrigger>
 											<AccordionContent className="space-y-4 pt-4 pb-0">
 												<FormField
@@ -755,11 +752,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 													render={({ field }) => (
 														<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
 															<div className="space-y-0.5">
-																<FormLabel>Skip TLS verification</FormLabel>
-																<p className="text-muted-foreground text-sm">
-																	Disable TLS certificate verification. Use only in trusted isolated environments. Takes priority over CA
-																	certificate.
-																</p>
+																<FormLabel>{t("mcpRegistry.form.fields.skipTlsVerification")}</FormLabel>
+																<p className="text-muted-foreground text-sm">{t("mcpRegistry.form.fields.skipTlsDescription")}</p>
 															</div>
 															<FormControl>
 																<Switch
@@ -776,7 +770,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 													name="tls_config.ca_cert_pem"
 													render={({ field }) => (
 														<FormItem>
-															<FormLabel>CA Certificate (PEM) (Optional)</FormLabel>
+															<FormLabel>{t("mcpRegistry.form.fields.caCertificate")}</FormLabel>
 															<FormControl>
 																<SecretVarInput
 																	variant="textarea"
@@ -790,9 +784,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 																	data-testid="mcp-tls-ca-cert-pem"
 																/>
 															</FormControl>
-															<p className="text-muted-foreground text-sm">
-																PEM-encoded CA certificate to trust for MCP server connections (e.g. self-signed or private CA).
-															</p>
+															<p className="text-muted-foreground text-sm">{t("mcpRegistry.form.fields.caCertificateDescription")}</p>
 															<FormMessage />
 														</FormItem>
 													)}
@@ -809,12 +801,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 										<div className="flex items-start gap-2">
 											<Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
 											<div className="flex-1">
-												<p className="text-xs font-medium text-amber-900">Docker Notice</p>
-												<p className="mt-0.5 text-xs text-amber-800">
-													If not using the official Bifrost Docker image, STDIO connections may not work if required commands (npx, python,
-													etc.) aren't installed. You can safely ignore this if running locally or using a custom image with the necessary
-													dependencies.
-												</p>
+												<p className="text-xs font-medium text-amber-900">{t("mcpRegistry.form.fields.dockerNoticeTitle")}</p>
+												<p className="mt-0.5 text-xs text-amber-800">{t("mcpRegistry.form.fields.dockerNoticeDescription")}</p>
 											</div>
 										</div>
 									</div>
@@ -825,7 +813,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 										name="stdio_config.command"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Command</FormLabel>
+												<FormLabel>{t("mcpRegistry.form.fields.command")}</FormLabel>
 												<FormControl>
 													<Input
 														{...field}
@@ -845,7 +833,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 
 									{/* Args (local state) */}
 									<div className="space-y-2">
-										<Label>Arguments (comma-separated)</Label>
+										<Label>{t("mcpRegistry.form.fields.arguments")}</Label>
 										<Input
 											value={argsText}
 											onChange={(e) => setArgsText(e.target.value)}
@@ -857,16 +845,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 									{/* Envs (local state) */}
 									<div className="space-y-2">
 										<div className="flex items-center gap-2">
-											<Label>Environment Variables</Label>
+											<Label>{t("mcpRegistry.form.fields.environmentVariables")}</Label>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild>
 														<Info className="text-muted-foreground h-4 w-4 cursor-help" />
 													</TooltipTrigger>
 													<TooltipContent className="max-w-xs">
-														<p>
-															Add a value for each variable, or leave it blank to read the value from the environment where Bifrost runs.
-														</p>
+														<p>{t("mcpRegistry.form.fields.envTooltip")}</p>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
@@ -875,7 +861,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 											value={envVars}
 											onChange={setEnvVars}
 											keyPlaceholder="API_KEY"
-											valuePlaceholder="Value (or leave blank to use host env)"
+											valuePlaceholder={t("mcpRegistry.form.fields.envValuePlaceholder")}
 											label=""
 										/>
 									</div>
@@ -887,7 +873,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 						<div className="dark:bg-card border-border border-t bg-white px-8 py-4">
 							<div className="flex justify-end gap-2">
 								<Button type="button" variant="outline" onClick={onClose} disabled={isLoading} data-testid="cancel-client-btn">
-									Cancel
+									{t("common.actions.cancel")}
 								</Button>
 								<TooltipProvider>
 									<Tooltip>
@@ -899,13 +885,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 													isLoading={isLoading}
 													data-testid="save-client-btn"
 												>
-													Create
+													{t("mcpRegistry.form.actions.create")}
 												</Button>
 											</span>
 										</TooltipTrigger>
 										{!hasCreateMCPClientAccess && (
 											<TooltipContent>
-												<p>You don't have permission to perform this action</p>
+												<p>{t("mcpRegistry.form.permissionDenied")}</p>
 											</TooltipContent>
 										)}
 									</Tooltip>
@@ -924,13 +910,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 						setOauthFlow(null);
 					}}
 					onSuccess={() => {
-						toast({ title: "Success", description: "MCP server connected with OAuth" });
+						toast({ title: t("common.status.success"), description: t("mcpRegistry.form.toasts.connectedWithOAuth") });
 						setOauthFlow(null);
 						onClose();
 						onSaved();
 					}}
 					onError={(error) => {
-						toast({ title: "OAuth Error", description: error, variant: "destructive" });
+						toast({ title: t("mcpRegistry.form.toasts.oauthErrorTitle"), description: error, variant: "destructive" });
 					}}
 					onConflict={(error) => {
 						setOauthFlow(null);
@@ -956,7 +942,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSaved }) => {
 					}}
 					onSuccess={() => {
 						setHeadersFlow(null);
-						toast({ title: "Success", description: "MCP server connected with per-user headers" });
+						toast({ title: t("common.status.success"), description: t("mcpRegistry.form.toasts.connectedWithPerUserHeaders") });
 						onSaved();
 						onClose();
 					}}

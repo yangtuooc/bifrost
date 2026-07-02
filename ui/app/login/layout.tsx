@@ -4,6 +4,7 @@ import { DEFAULT_POST_LOGIN_PATH, getLoginGotoFromSearch } from "@/lib/utils/log
 import { getApiBaseUrl } from "@/lib/utils/port";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
+import { useTranslation } from "react-i18next";
 import LoginPage from "./page";
 
 function RouteComponent() {
@@ -21,6 +22,8 @@ function RouteComponent() {
 }
 
 function PendingComponent() {
+	const { t } = useTranslation();
+
 	return (
 		<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
 			<div className="flex min-h-screen items-center justify-center p-4">
@@ -30,7 +33,7 @@ function PendingComponent() {
 							<img src="/bifrost-logo.webp" alt="Bifrost" width={160} height={26} />
 						</div>
 						<div className="flex items-center justify-center py-6">
-							<div className="text-muted-foreground text-sm">Checking authentication...</div>
+							<div className="text-muted-foreground text-sm">{t("common.loading.checkingAuthentication")}</div>
 						</div>
 					</div>
 				</div>

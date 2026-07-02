@@ -3,6 +3,8 @@ import type { VirtualKey } from "@/lib/types/governance";
 import type { MCPClient } from "@/lib/types/mcp";
 import type { HarnessPlatform, ServerScope } from "./types";
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 /** Default port Bifrost serves on; used when guessing the gateway URL in local dev. */
 const DEFAULT_BIFROST_PORT = "8080";
 
@@ -78,12 +80,16 @@ export function maskSecret(value?: string): string {
 	return `${value.slice(0, 6)}****${value.slice(-4)}`;
 }
 
-/** Human-readable label describing how many servers a command registers. */
-export function getRegistrationLabel(serverScope: ServerScope, selectedServers: MCPClient[]): string {
+/** 生成描述命令注册 server 数量的可读标签。 */
+export function getRegistrationLabel(serverScope: ServerScope, selectedServers: MCPClient[], t: Translate): string {
 	if (serverScope === "selected" && selectedServers.length > 0) {
-		return `${selectedServers.length} ${selectedServers.length === 1 ? "server" : "servers"}`;
+		const key =
+			selectedServers.length === 1
+				? "mcpRegistry.usageGuide.registration.singleServer"
+				: "mcpRegistry.usageGuide.registration.multipleServers";
+		return t(key, { count: selectedServers.length });
 	}
-	return "bifrost";
+	return t("mcpRegistry.usageGuide.registration.defaultName");
 }
 
 /** The registration name used for the generated MCP server entry. */

@@ -6,6 +6,7 @@ import { DefaultCoreConfig } from "@/lib/types/config";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 interface ModelSettingsFormData {
@@ -16,6 +17,7 @@ interface ModelSettingsFormData {
 }
 
 export default function ModelSettingsView() {
+	const { t } = useTranslation();
 	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig } = useGetCoreConfigQuery({ fromDB: true });
 	const frameworkConfig = bifrostConfig?.framework_config;
@@ -87,7 +89,7 @@ export default function ModelSettingsView() {
 					routing_chain_max_depth: data.routing_chain_max_depth,
 				},
 			}).unwrap();
-			toast.success("Model settings updated successfully.");
+			toast.success(t("config.modelSettings.toasts.updated"));
 			reset(data);
 		} catch (error) {
 			toast.error(getErrorMessage(error));
@@ -97,7 +99,7 @@ export default function ModelSettingsView() {
 	const handleForceSync = async () => {
 		try {
 			await forcePricingSync().unwrap();
-			toast.success("Pricing synced successfully.");
+			toast.success(t("config.pricing.toasts.synced"));
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
@@ -107,16 +109,16 @@ export default function ModelSettingsView() {
 		<div className="mx-auto w-full max-w-7xl space-y-4" data-testid="model-settings-view">
 			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 				<div>
-					<h2 className="text-lg font-semibold tracking-tight">Model Settings</h2>
-					<p className="text-muted-foreground text-sm">Configure pricing and routing behaviour.</p>
+					<h2 className="text-lg font-semibold tracking-tight">{t("config.modelSettings.title")}</h2>
+					<p className="text-muted-foreground text-sm">{t("config.modelSettings.description")}</p>
 				</div>
 
 				<div className="space-y-4">
-					{/* Pricing Datasheet URL */}
+					{/* Pricing datasheet URL */}
 					<div className="space-y-2 rounded-sm border p-4">
 						<div className="space-y-0.5">
-							<Label htmlFor="pricing-datasheet-url">Pricing Datasheet URL</Label>
-							<p className="text-muted-foreground text-sm">URL to a custom pricing datasheet. Leave empty to use default pricing.</p>
+							<Label htmlFor="pricing-datasheet-url">{t("config.pricing.fields.pricingDatasheetUrl")}</Label>
+							<p className="text-muted-foreground text-sm">{t("config.pricing.descriptions.pricingDatasheetUrl")}</p>
 						</div>
 						<Input
 							id="pricing-datasheet-url"
@@ -131,7 +133,7 @@ export default function ModelSettingsView() {
 											value.startsWith("http://") ||
 											value.startsWith("https://") ||
 											value.startsWith("file://") ||
-											"URL must start with http://, https://, or file://"
+											t("config.pricing.validation.urlHttpHttpsFile")
 										);
 									},
 								},
@@ -141,11 +143,11 @@ export default function ModelSettingsView() {
 						{errors.pricing_datasheet_url && <p className="text-destructive text-sm">{errors.pricing_datasheet_url.message}</p>}
 					</div>
 
-					{/* Model Parameters URL */}
+					{/* Model parameters URL */}
 					<div className="space-y-2 rounded-sm border p-4">
 						<div className="space-y-0.5">
-							<Label htmlFor="model-parameters-url">Model Parameters URL</Label>
-							<p className="text-muted-foreground text-sm">URL to a custom model parameters datasheet. Leave empty to use default.</p>
+							<Label htmlFor="model-parameters-url">{t("config.pricing.fields.modelParametersUrl")}</Label>
+							<p className="text-muted-foreground text-sm">{t("config.pricing.descriptions.modelParametersUrl")}</p>
 						</div>
 						<Input
 							id="model-parameters-url"
@@ -160,7 +162,7 @@ export default function ModelSettingsView() {
 											value.startsWith("http://") ||
 											value.startsWith("https://") ||
 											value.startsWith("file://") ||
-											"URL must start with http://, https://, or file://"
+											t("config.pricing.validation.urlHttpHttpsFile")
 										);
 									},
 								},
@@ -170,11 +172,11 @@ export default function ModelSettingsView() {
 						{errors.model_parameters_url && <p className="text-destructive text-sm">{errors.model_parameters_url.message}</p>}
 					</div>
 
-					{/* Pricing Sync Interval */}
+					{/* Pricing sync interval */}
 					<div className="space-y-2 rounded-sm border p-4">
 						<div className="space-y-0.5">
-							<Label htmlFor="pricing-sync-interval">Pricing Sync Interval (hours)</Label>
-							<p className="text-muted-foreground text-sm">How often to sync pricing data from the datasheet URL.</p>
+							<Label htmlFor="pricing-sync-interval">{t("config.pricing.fields.pricingSyncIntervalHours")}</Label>
+							<p className="text-muted-foreground text-sm">{t("config.pricing.descriptions.pricingSyncInterval")}</p>
 						</div>
 						<Input
 							id="pricing-sync-interval"
@@ -182,22 +184,20 @@ export default function ModelSettingsView() {
 							data-testid="pricing-sync-interval-input"
 							className={errors.pricing_sync_interval_hours ? "border-destructive" : ""}
 							{...register("pricing_sync_interval_hours", {
-								required: "Pricing sync interval is required",
-								min: { value: 1, message: "Sync interval must be at least 1 hour" },
-								max: { value: 8760, message: "Sync interval cannot exceed 8760 hours (1 year)" },
+								required: t("config.pricing.validation.syncIntervalRequired"),
+								min: { value: 1, message: t("config.pricing.validation.syncIntervalMin") },
+								max: { value: 8760, message: t("config.pricing.validation.syncIntervalMax") },
 								valueAsNumber: true,
 							})}
 						/>
 						{errors.pricing_sync_interval_hours && <p className="text-destructive text-sm">{errors.pricing_sync_interval_hours.message}</p>}
 					</div>
 
-					{/* Routing Chain Max Depth */}
+					{/* Routing chain max depth */}
 					<div className="flex items-center justify-between rounded-sm border p-4">
 						<div className="space-y-0.5">
-							<Label htmlFor="routing-chain-max-depth">Routing Chain Max Depth</Label>
-							<p className="text-muted-foreground text-sm">
-								Maximum number of chained routing rule evaluations per request. Prevents infinite loops from circular rule definitions.
-							</p>
+							<Label htmlFor="routing-chain-max-depth">{t("config.modelSettings.fields.routingChainMaxDepth")}</Label>
+							<p className="text-muted-foreground text-sm">{t("config.modelSettings.descriptions.routingChainMaxDepth")}</p>
 						</div>
 						<Input
 							id="routing-chain-max-depth"
@@ -205,9 +205,9 @@ export default function ModelSettingsView() {
 							className={`w-24 ${errors.routing_chain_max_depth ? "border-destructive" : ""}`}
 							data-testid="routing-chain-max-depth-input"
 							{...register("routing_chain_max_depth", {
-								required: "Routing chain max depth is required",
-								min: { value: 1, message: "Must be at least 1" },
-								max: { value: 100, message: "Cannot exceed 100" },
+								required: t("config.modelSettings.validation.routingChainMaxDepthRequired"),
+								min: { value: 1, message: t("config.modelSettings.validation.minOne") },
+								max: { value: 100, message: t("config.modelSettings.validation.maxHundred") },
 								valueAsNumber: true,
 							})}
 						/>
@@ -223,10 +223,10 @@ export default function ModelSettingsView() {
 						disabled={isForceSyncing || isLoading || hasChanges || !hasSettingsUpdateAccess}
 						data-testid="pricing-force-sync-btn"
 					>
-						{isForceSyncing ? "Syncing..." : "Force Sync Now"}
+						{isForceSyncing ? t("config.pricing.actions.syncing") : t("config.pricing.actions.forceSyncNow")}
 					</Button>
 					<Button type="submit" disabled={!hasChanges || isLoading || !hasSettingsUpdateAccess} data-testid="model-settings-save-btn">
-						{isLoading ? "Saving..." : "Save Changes"}
+						{isLoading ? t("common.actions.saving") : t("common.actions.saveChanges")}
 					</Button>
 				</div>
 			</form>

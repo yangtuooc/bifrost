@@ -1,5 +1,6 @@
 import { VariantProps, cva } from "class-variance-authority";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./input.css";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../tooltip";
 import { cn } from "../utils";
@@ -56,6 +57,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 		},
 		ref,
 	) => {
+		const { t } = useTranslation();
 		// Internal state to handle intermediate values (like empty string or partial input)
 		const initialValue = value === undefined ? defaultValue : value;
 		const [internalValue, setInternalValue] = useState<string>(() => {
@@ -83,20 +85,22 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 
 				// Validate min/max
 				if (min !== undefined && numValue < min) {
-					onValueError?.(`Value cannot be less than ${min}`);
-					setErrorMessage(`Value cannot be less than ${min}`);
+					const message = t("common.numberInput.lessThan", { min });
+					onValueError?.(message);
+					setErrorMessage(message);
 					return min.toString();
 				}
 
 				if (max !== undefined && numValue > max) {
-					onValueError?.(`Value cannot be greater than ${max}`);
-					setErrorMessage(`Value cannot be greater than ${max}`);
+					const message = t("common.numberInput.greaterThan", { max });
+					onValueError?.(message);
+					setErrorMessage(message);
 					return max.toString();
 				}
 
 				return formattedValue;
 			},
-			[min, max, decimalPlaces, onValueError],
+			[min, max, decimalPlaces, onValueError, t],
 		);
 
 		const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +135,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 					const normalizedNum = normalized ? Number(normalized) : fallbackValue;
 					setInternalValue(String(normalizedNum));
 					prevValueRef.current = normalizedNum;
-					if (!errorMessage) setErrorMessage(`Value cannot be empty, replaced with ${normalizedNum}`);
+					if (!errorMessage) setErrorMessage(t("common.numberInput.emptyReplaced", { value: normalizedNum }));
 					onChange?.(normalizedNum);
 				}
 				return;
@@ -140,7 +144,7 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 			const formattedValue = validateAndFormatNumber(internalValue);
 			setInternalValue(formattedValue);
 
-			if (!errorMessage && !formattedValue) setErrorMessage(`Value cannot be empty, replaced with ${fallbackValue}`);
+			if (!errorMessage && !formattedValue) setErrorMessage(t("common.numberInput.emptyReplaced", { value: fallbackValue }));
 			onChange?.(formattedValue ? Number(formattedValue) : fallbackValue);
 		};
 
@@ -150,22 +154,25 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
 
 			// Check if the pasted content is a valid number format
 			if (!/^-?\d*\.?\d*$/.test(pastedText)) {
-				onValueError?.("Invalid number format");
-				setErrorMessage("Invalid number format");
+				const message = t("common.numberInput.invalidFormat");
+				onValueError?.(message);
+				setErrorMessage(message);
 				return;
 			}
 
 			// Handle decimal restriction
 			if (!allowDecimal && pastedText.includes(".")) {
-				onValueError?.("Decimal numbers are not allowed");
-				setErrorMessage("Decimal numbers are not allowed");
+				const message = t("common.numberInput.decimalNotAllowed");
+				onValueError?.(message);
+				setErrorMessage(message);
 				return;
 			}
 
 			// Handle negative restriction
 			if (!allowNegative && pastedText.includes("-")) {
-				onValueError?.("Negative numbers are not allowed");
-				setErrorMessage("Negative numbers are not allowed");
+				const message = t("common.numberInput.negativeNotAllowed");
+				onValueError?.(message);
+				setErrorMessage(message);
 				return;
 			}
 

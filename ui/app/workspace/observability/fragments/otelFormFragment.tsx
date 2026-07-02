@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm, type Control, type Resolver, type UseFormReturn } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 // ProfileForm is a single profile's form shape, derived from the form schema.
 type ProfileForm = OtelFormSchema["profiles"][number];
@@ -57,22 +58,22 @@ interface OtelFormFragmentProps {
 
 const traceTypeOptions: {
 	value: string;
-	label: string;
+	labelKey: string;
 	disabled?: boolean;
-	disabledReason?: string;
+	disabledReasonKey?: string;
 }[] = [
-	{ value: "genai_extension", label: "OTel GenAI Extension (Recommended)" },
+	{ value: "genai_extension", labelKey: "observability.otel.traceTypes.genaiExtension" },
 	{
 		value: "vercel",
-		label: "Vercel AI SDK",
+		labelKey: "observability.otel.traceTypes.vercel",
 		disabled: true,
-		disabledReason: "Coming soon",
+		disabledReasonKey: "observability.common.comingSoon",
 	},
 	{
 		value: "open_inference",
-		label: "Arize OpenInference",
+		labelKey: "observability.otel.traceTypes.openInference",
 		disabled: true,
-		disabledReason: "Coming soon",
+		disabledReasonKey: "observability.common.comingSoon",
 	},
 ];
 const protocolOptions: {
@@ -147,6 +148,7 @@ export function OtelFormFragment({
 	isDeleting = false,
 	isLoading = false,
 }: OtelFormFragmentProps) {
+	const { t } = useTranslation();
 	const hasOtelAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [isSaving, setIsSaving] = useState(false);
 	const [profileOpenState, setProfileOpenState] = useState<Record<number, boolean>>({});
@@ -218,7 +220,7 @@ export function OtelFormFragment({
 					disabled={!hasOtelAccess}
 					data-testid="otel-add-profile-btn"
 				>
-					<Plus className="size-4" /> Add Profile
+					<Plus className="size-4" /> {t("observability.otel.addProfile")}
 				</Button>
 
 				{/* Form Actions */}
@@ -228,7 +230,7 @@ export function OtelFormFragment({
 						name="enabled"
 						render={({ field }) => (
 							<FormItem className="flex items-center gap-2 py-2">
-								<FormLabel className="text-muted-foreground text-sm font-medium">Enabled</FormLabel>
+								<FormLabel className="text-muted-foreground text-sm font-medium">{t("common.status.enabled")}</FormLabel>
 								<FormControl>
 									<Switch
 										checked={field.value}
@@ -248,8 +250,8 @@ export function OtelFormFragment({
 								onClick={onDelete}
 								disabled={isDeleting || !hasOtelAccess}
 								data-testid="otel-connector-delete-btn"
-								title="Delete connector"
-								aria-label="Delete connector"
+								title={t("observability.common.deleteConnector")}
+								aria-label={t("observability.common.deleteConnector")}
 							>
 								<Trash2 className="size-4" />
 							</Button>
@@ -262,23 +264,23 @@ export function OtelFormFragment({
 							}}
 							disabled={!hasOtelAccess || isLoading || !form.formState.isDirty}
 						>
-							Reset
+							{t("common.actions.reset")}
 						</Button>
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<Button type="submit" disabled={!hasOtelAccess || !form.formState.isDirty} isLoading={isSaving}>
-										Save OTEL Configuration
+										{t("observability.otel.save")}
 									</Button>
 								</TooltipTrigger>
 								{!form.formState.isDirty && (
 									<TooltipContent>
 										<p>
 											{!form.formState.isDirty && !form.formState.isValid
-												? "No changes made and validation errors present"
+												? t("observability.common.noChangesAndValidationErrors")
 												: !form.formState.isDirty
-													? "No changes made"
-													: "Please fix validation errors"}
+													? t("observability.common.noChanges")
+													: t("observability.common.fixValidationErrors")}
 										</p>
 									</TooltipContent>
 								)}
@@ -305,6 +307,7 @@ interface OtelProfileSectionProps {
 // OtelProfileSection renders one collapsible profile. The header stays visible when collapsed
 // and surfaces the profile identity plus its enable toggle and remove control.
 function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, open, onOpenChange, onRemove }: OtelProfileSectionProps) {
+	const { t } = useTranslation();
 	const base = `profiles.${index}` as const;
 	const protocol = form.watch(`${base}.protocol`);
 	const metricsEnabled = form.watch(`${base}.metrics_enabled`);
@@ -332,9 +335,9 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						<ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
 						<div className="flex min-w-0 flex-col">
 							<span className="flex items-center gap-2 truncate text-sm font-medium">
-								{serviceName || `Profile ${index + 1}`}
-								{!enabled && <Badge variant="secondary">Disabled</Badge>}
-								{hasError && <Badge variant="destructive">Error</Badge>}
+								{serviceName || t("observability.otel.profileTitle", { index: index + 1 })}
+								{!enabled && <Badge variant="secondary">{t("common.status.disabled")}</Badge>}
+								{hasError && <Badge variant="destructive">{t("common.status.error")}</Badge>}
 							</span>
 							{collectorPreview && <span className="text-muted-foreground truncate text-xs">{collectorPreview}</span>}
 						</div>
@@ -352,7 +355,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 									onCheckedChange={field.onChange}
 									disabled={!hasOtelAccess}
 									data-testid={`otel-profile-${index}-enable-toggle`}
-									aria-label="Enable profile"
+									aria-label={t("observability.otel.enableProfile")}
 								/>
 							</FormControl>
 						</FormItem>
@@ -367,8 +370,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						onClick={onRemove}
 						disabled={!hasOtelAccess}
 						data-testid={`otel-profile-${index}-remove-btn`}
-						title="Remove profile"
-						aria-label="Remove profile"
+						title={t("observability.otel.removeProfile")}
+						aria-label={t("observability.otel.removeProfile")}
 					>
 						<Trash2 className="size-4" />
 					</Button>
@@ -382,8 +385,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						name={`${base}.service_name`}
 						render={({ field }) => (
 							<FormItem className="w-full">
-								<FormLabel>Service Name</FormLabel>
-								<FormDescription>If kept empty, the service name will be set to "bifrost"</FormDescription>
+								<FormLabel>{t("observability.otel.serviceName")}</FormLabel>
+								<FormDescription>{t("observability.otel.serviceNameDescription")}</FormDescription>
 								<FormControl>
 									<Input placeholder="bifrost" disabled={!hasOtelAccess} {...field} />
 								</FormControl>
@@ -396,7 +399,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						name={`${base}.collector_url`}
 						render={({ field }) => (
 							<FormItem className="w-full">
-								<FormLabel>OTLP Collector URL</FormLabel>
+								<FormLabel>{t("observability.otel.collectorUrl")}</FormLabel>
 								<div className="text-muted-foreground text-xs">
 									<code>{protocol === "http" ? "http(s)://<host>:<port>/v1/traces" : "<host>:<port>"}</code>
 								</div>
@@ -404,8 +407,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 									<SecretVarInput
 										placeholder={
 											protocol === "http"
-												? "https://otel-collector.example.com:4318/v1/traces or env.OTEL_COLLECTOR_URL"
-												: "otel-collector.example.com:4317 or env.OTEL_COLLECTOR_URL"
+												? t("observability.otel.collectorUrlHttpPlaceholder")
+												: t("observability.otel.collectorUrlGrpcPlaceholder")
 										}
 										disabled={!hasOtelAccess}
 										{...field}
@@ -433,18 +436,14 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						render={({ field }) => (
 							<FormItem className="w-full">
 								<FormLabel>
-									Request Headers <span className="text-muted-foreground font-normal">(Optional)</span>
+									{t("observability.otel.requestHeaders")}{" "}
+									<span className="text-muted-foreground font-normal">{t("observability.common.optionalSuffix")}</span>
 								</FormLabel>
-								<FormDescription>
-									Comma-separated list of request headers to capture and emit as span attributes. Supports exact names and wildcard patterns
-									(e.g. <code className="text-xs">x-custom-*</code> captures all headers with that prefix,{" "}
-									<code className="text-xs">*</code> captures all headers — note that <code className="text-xs">*</code> will capture
-									sensitive headers like Authorization).
-								</FormDescription>
+								<FormDescription>{t("observability.otel.requestHeadersDescription")}</FormDescription>
 								<FormControl>
 									<RequestHeadersTextarea
 										className="h-24"
-										placeholder="X-Tenant-ID, X-Request-Source, x-custom-*"
+										placeholder={t("observability.otel.requestHeadersPlaceholder")}
 										disabled={!hasOtelAccess}
 										value={field.value ?? []}
 										onChange={field.onChange}
@@ -461,11 +460,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						render={({ field }) => (
 							<FormItem className="flex flex-row items-center justify-between">
 								<div className="space-y-0.5">
-									<FormLabel className="text-base">Disable Content Logging</FormLabel>
-									<FormDescription>
-										When enabled, message content (input/output messages, tool definitions, and tool call arguments/results) is dropped from
-										exported spans. Only metadata such as model, tokens, and latency is sent to the collector.
-									</FormDescription>
+									<FormLabel className="text-base">{t("observability.otel.disableContentLogging")}</FormLabel>
+									<FormDescription>{t("observability.otel.disableContentLoggingDescription")}</FormDescription>
 								</div>
 								<FormControl>
 									<Switch
@@ -484,12 +480,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						render={({ field }) => (
 							<FormItem className="flex flex-row items-center justify-between">
 								<div className="space-y-0.5">
-									<FormLabel className="text-base">Group Traces by Session</FormLabel>
-									<FormDescription>
-										When enabled, requests sharing the same x-bf-session-id header are grouped into a single trace, each request appearing
-										as a top-level sibling span. A request carrying an inbound W3C traceparent stays on its own distributed trace and is
-										unaffected.
-									</FormDescription>
+									<FormLabel className="text-base">{t("observability.otel.groupTracesBySession")}</FormLabel>
+									<FormDescription>{t("observability.otel.groupTracesBySessionDescription")}</FormDescription>
 								</div>
 								<FormControl>
 									<Switch
@@ -508,11 +500,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 						render={({ field }) => (
 							<FormItem className="flex flex-row items-center justify-between">
 								<div className="space-y-0.5">
-									<FormLabel className="text-base">Disable Root Span Content</FormLabel>
-									<FormDescription>
-										When enabled, input/output message content is dropped from the root span only; the underlying generation (llm.call) span
-										keeps the full content.
-									</FormDescription>
+									<FormLabel className="text-base">{t("observability.otel.disableRootSpanContent")}</FormLabel>
+									<FormDescription>{t("observability.otel.disableRootSpanContentDescription")}</FormDescription>
 								</div>
 								<FormControl>
 									<Switch
@@ -531,11 +520,11 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 							name={`${base}.trace_type`}
 							render={({ field }) => (
 								<FormItem className="flex-1">
-									<FormLabel>Format</FormLabel>
+									<FormLabel>{t("observability.otel.format")}</FormLabel>
 									<Select onValueChange={field.onChange} value={field.value ?? traceTypeOptions[0].value} disabled={!hasOtelAccess}>
 										<FormControl>
 											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Select trace type" />
+												<SelectValue placeholder={t("observability.otel.selectTraceType")} />
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
@@ -544,9 +533,9 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 													key={option.value}
 													value={option.value}
 													disabled={option.disabled}
-													disabledReason={option.disabledReason}
+													disabledReason={option.disabledReasonKey ? t(option.disabledReasonKey) : undefined}
 												>
-													{option.label}
+													{t(option.labelKey)}
 												</SelectItem>
 											))}
 										</SelectContent>
@@ -561,11 +550,11 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 							name={`${base}.protocol`}
 							render={({ field }) => (
 								<FormItem className="flex-1">
-									<FormLabel>Protocol</FormLabel>
+									<FormLabel>{t("observability.otel.protocol")}</FormLabel>
 									<Select onValueChange={field.onChange} value={field.value} disabled={!hasOtelAccess}>
 										<FormControl>
 											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Select protocol" />
+												<SelectValue placeholder={t("observability.otel.selectProtocol")} />
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
@@ -596,10 +585,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 								<FormItem className="flex flex-row items-center gap-2">
 									<div className="flex w-full flex-row items-center gap-2">
 										<div className="flex flex-col gap-1">
-											<FormLabel>Insecure (Skip TLS)</FormLabel>
-											<FormDescription>
-												Skip TLS verification. Disable this to use TLS with system root CAs or a custom CA certificate.
-											</FormDescription>
+											<FormLabel>{t("observability.otel.insecure")}</FormLabel>
+											<FormDescription>{t("observability.otel.insecureDescription")}</FormDescription>
 										</div>
 										<div className="ml-auto">
 											<Switch
@@ -623,10 +610,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 								name={`${base}.tls_ca_cert`}
 								render={({ field }) => (
 									<FormItem className="w-full">
-										<FormLabel>TLS CA Certificate Path</FormLabel>
-										<FormDescription>
-											File path to the CA certificate on the Bifrost server. Leave empty to use system root CAs.
-										</FormDescription>
+										<FormLabel>{t("observability.otel.tlsCaCertPath")}</FormLabel>
+										<FormDescription>{t("observability.otel.tlsCaCertPathDescription")}</FormDescription>
 										<FormControl>
 											<Input placeholder="/path/to/ca.crt" disabled={!hasOtelAccess} {...field} />
 										</FormControl>
@@ -647,11 +632,10 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 									<div className="flex w-full flex-row items-center gap-2">
 										<div className="flex flex-col gap-1">
 											<h3 className="flex flex-row items-center gap-2 text-sm font-medium">
-												Enable Metrics Export <Badge variant="secondary">BETA</Badge>
+												{t("observability.otel.enableMetricsExport")}{" "}
+												<Badge variant="secondary">{t("observability.common.betaBadge")}</Badge>
 											</h3>
-											<p className="text-muted-foreground text-xs">
-												Push metrics to an OTEL Collector for proper aggregation in cluster deployments
-											</p>
+											<p className="text-muted-foreground text-xs">{t("observability.otel.metricsExportDescription")}</p>
 										</div>
 										<div className="ml-auto">
 											<Switch
@@ -674,7 +658,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 									name={`${base}.metrics_endpoint`}
 									render={({ field }) => (
 										<FormItem className="w-full">
-											<FormLabel>Metrics Endpoint</FormLabel>
+											<FormLabel>{t("observability.otel.metricsEndpoint")}</FormLabel>
 											<div className="text-muted-foreground text-xs">
 												<code>{protocol === "http" ? "http(s)://<host>:<port>/v1/metrics" : "<host>:<port>"}</code>
 											</div>
@@ -682,8 +666,8 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 												<SecretVarInput
 													placeholder={
 														protocol === "http"
-															? "https://otel-collector:4318/v1/metrics or env.OTEL_METRICS_ENDPOINT"
-															: "otel-collector:4317 or env.OTEL_METRICS_ENDPOINT"
+															? t("observability.otel.metricsEndpointHttpPlaceholder")
+															: t("observability.otel.metricsEndpointGrpcPlaceholder")
 													}
 													disabled={!hasOtelAccess}
 													{...field}
@@ -699,7 +683,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 									name={`${base}.metrics_push_interval`}
 									render={({ field }) => (
 										<FormItem className="w-full max-w-xs">
-											<FormLabel>Push Interval (seconds)</FormLabel>
+											<FormLabel>{t("observability.otel.pushInterval")}</FormLabel>
 											<FormControl>
 												<Input
 													type="number"
@@ -711,7 +695,7 @@ function OtelProfileSection({ form, control, index, hasOtelAccess, canRemove, op
 													onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
 												/>
 											</FormControl>
-											<FormDescription>How often to push metrics (1-300 seconds)</FormDescription>
+											<FormDescription>{t("observability.otel.pushIntervalDescription")}</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}

@@ -1,18 +1,13 @@
-// Landing route for the upstream OAuth callback (admin-test OAuth flow path).
-// Backend's /api/oauth/callback performs the actual token exchange, then
-// 302s here with ?status=success or ?status=failed&error=... The popup
-// opened by the MCP registry's OAuth2Authorizer expects a postMessage on
-// its opener window; this page sends it and closes itself.
-//
-// If there's no opener (user opened the URL directly), fall back to the
-// MCP registry — that's where the admin came from when triggering the
-// admin-test flow.
+// 上游 OAuth callback 的落地页。后端完成 token exchange 后跳回这里，页面再通知 opener 并关闭自己。
+// 如果没有 opener（用户直接打开 URL），则展示一个可返回 MCP registry 的 fallback。
 
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function MCPRegistryOAuthCallbackPage() {
+	const { t } = useTranslation();
 	const [closeAttempted, setCloseAttempted] = useState(false);
 
 	useEffect(() => {
@@ -24,15 +19,17 @@ export default function MCPRegistryOAuthCallbackPage() {
 			if (status === "success") {
 				window.opener.postMessage({ type: "oauth_success" }, window.location.origin);
 			} else {
-				window.opener.postMessage({ type: "oauth_failed", error: error ?? "OAuth flow failed" }, window.location.origin);
+				window.opener.postMessage(
+					{ type: "oauth_failed", error: error ?? t("mcpRegistry.authorizers.oauth.flowFailed") },
+					window.location.origin,
+				);
 			}
 			setCloseAttempted(true);
 			window.close();
 		}
-	}, []);
+	}, [t]);
 
-	// If we got here, either there's no opener or the close call was blocked.
-	// Render a small fallback so the tab isn't blank.
+	// 如果执行到这里，说明没有 opener 或 close 被阻止；渲染 fallback 避免空白页。
 	const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
 	const status = params?.get("status") ?? "unknown";
 	const error = params?.get("error");
@@ -40,12 +37,16 @@ export default function MCPRegistryOAuthCallbackPage() {
 	return (
 		<div className="mx-auto flex min-h-[60vh] w-full max-w-xl items-center justify-center p-6">
 			<div className="bg-card w-full rounded-lg border p-8 text-center shadow-sm">
-				<h1 className="text-xl font-semibold">{status === "success" ? "Authorization complete" : "Authorization failed"}</h1>
+				<h1 className="text-xl font-semibold">
+					{status === "success" ? t("mcpRegistry.authorizers.callback.complete") : t("mcpRegistry.authorizers.callback.failed")}
+				</h1>
 				{error && <p className="text-destructive mt-2 text-sm">{error}</p>}
-				<p className="text-muted-foreground mt-4 text-sm">{closeAttempted ? "You can close this tab." : "This window can be closed."}</p>
+				<p className="text-muted-foreground mt-4 text-sm">
+					{closeAttempted ? t("mcpRegistry.authorizers.callback.canCloseAfterAttempt") : t("mcpRegistry.authorizers.callback.canClose")}
+				</p>
 				<div className="mt-6">
 					<Button asChild variant="outline" data-testid="mcp-callback-back-button">
-						<Link to="/workspace/mcp-registry">Back to MCP registry</Link>
+						<Link to="/workspace/mcp-registry">{t("mcpRegistry.authorizers.callback.backToRegistry")}</Link>
 					</Button>
 				</div>
 			</div>

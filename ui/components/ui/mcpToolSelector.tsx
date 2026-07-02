@@ -1,6 +1,7 @@
 import { CodeEditor } from "@/components/ui/codeEditor";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { components, OptionProps } from "react-select";
 import { AsyncMultiSelect } from "./asyncMultiselect";
 import { Badge } from "./badge";
@@ -51,18 +52,11 @@ interface MCPToolSelectorProps {
 	className?: string;
 }
 
-export function MCPToolSelector({
-	value,
-	onChange,
-	mcpClients,
-	placeholder = "Search and select tools...",
-	disabled = false,
-	className,
-}: MCPToolSelectorProps) {
+export function MCPToolSelector({ value, onChange, mcpClients, placeholder, disabled = false, className }: MCPToolSelectorProps) {
+	const { t } = useTranslation();
 	const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
 
-	// Flatten all tools from all MCP clients into searchable options
-	// Using meta field for complex data as per Option type definition
+	// 将所有 MCP client 的工具拍平成可搜索选项，复杂数据放到 Option.meta。
 	const allToolOptions = useMemo(() => {
 		const options: Option<ToolOptionMeta>[] = [];
 
@@ -89,7 +83,7 @@ export function MCPToolSelector({
 		return options;
 	}, [mcpClients]);
 
-	// Get full tool info for selected tools
+	// 根据已选工具补齐展示所需的 client 和工具详情。
 	const selectedToolsWithInfo = useMemo(() => {
 		return value.map((selected) => {
 			const client = mcpClients.find((c) => c.config.client_id === selected.mcpClientId);
@@ -103,7 +97,7 @@ export function MCPToolSelector({
 		});
 	}, [value, mcpClients]);
 
-	// Filter out already selected tools from options
+	// 从候选项中过滤掉已经选择的工具。
 	const availableOptions = useMemo(() => {
 		const selectedKeys = new Set(value.map((t) => `${t.mcpClientId}:${t.toolName}`));
 		return allToolOptions.filter((opt) => !selectedKeys.has(opt.value));
@@ -163,9 +157,9 @@ export function MCPToolSelector({
 
 	return (
 		<div className={cn("space-y-3", className)}>
-			{/* Search dropdown */}
+			{/* 搜索下拉框 */}
 			<AsyncMultiSelect<ToolOptionMeta>
-				placeholder={placeholder}
+				placeholder={placeholder ?? t("mcpRegistry.selectors.searchToolsPlaceholder")}
 				disabled={disabled}
 				defaultOptions={availableOptions}
 				reload={reload}
@@ -176,11 +170,11 @@ export function MCPToolSelector({
 				closeMenuOnSelect={true}
 				hideSelectedOptions={true}
 				controlShouldRenderValue={false}
-				noOptionsMessage={() => "No results found"}
+				noOptionsMessage={() => t("mcpRegistry.selectors.noResultsFound")}
 				views={{
 					option: (optionProps: OptionProps<ToolOptionMeta>) => {
 						const { Option } = components;
-						// Access data as Option<ToolOptionMeta> since that's the actual runtime type
+						// 运行时 data 实际是携带 meta 的 Option<ToolOptionMeta>。
 						const data = optionProps.data as unknown as Option<ToolOptionMeta>;
 						return (
 							<Option
@@ -205,15 +199,15 @@ export function MCPToolSelector({
 				}}
 			/>
 
-			{/* Selected tools table */}
+			{/* 已选工具表格 */}
 			{selectedToolsWithInfo.length > 0 && (
 				<div className="overflow-hidden rounded-md border">
 					<Table className="table-fixed">
 						<TableHeader>
 							<TableRow>
 								<TableHead className="w-10"></TableHead>
-								<TableHead className="w-auto">Tool</TableHead>
-								<TableHead className="hidden w-32 md:table-cell">Server</TableHead>
+								<TableHead className="w-auto">{t("mcpRegistry.selectors.tool")}</TableHead>
+								<TableHead className="hidden w-32 md:table-cell">{t("mcpRegistry.selectors.server")}</TableHead>
 								<TableHead className="w-10"></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -271,7 +265,9 @@ export function MCPToolSelector({
 												<tr>
 													<td colSpan={4} className="p-0">
 														<div className="bg-muted/30 border-t px-4 py-3">
-															<div className="text-muted-foreground mb-2 text-xs font-medium">Parameters Schema</div>
+															<div className="text-muted-foreground mb-2 text-xs font-medium">
+																{t("mcpRegistry.selectors.parametersSchema")}
+															</div>
 															{tool.parameters ? (
 																<CodeEditor
 																	className="z-0 w-full rounded-md border"
@@ -289,7 +285,7 @@ export function MCPToolSelector({
 																	}}
 																/>
 															) : (
-																<div className="text-muted-foreground text-sm">No parameters defined</div>
+																<div className="text-muted-foreground text-sm">{t("mcpRegistry.selectors.noParameters")}</div>
 															)}
 														</div>
 													</td>
@@ -304,10 +300,10 @@ export function MCPToolSelector({
 				</div>
 			)}
 
-			{/* Empty state */}
+			{/* 空状态 */}
 			{selectedToolsWithInfo.length === 0 && (
 				<div className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
-					No tools selected. Use the search above to add tools.
+					{t("mcpRegistry.selectors.noToolsSelected")}
 				</div>
 			)}
 		</div>

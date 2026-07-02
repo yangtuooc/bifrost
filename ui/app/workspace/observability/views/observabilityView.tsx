@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import BigQueryView from "./plugins/bigqueryView";
 import DatadogView from "./plugins/datadogView";
 import KafkaView from "./plugins/kafkaView";
@@ -84,6 +85,7 @@ const supportedPlatformsList = (resolvedTheme: string): SupportedPlatform[] => [
 ];
 
 export default function ObservabilityView() {
+	const { t } = useTranslation();
 	const dispatch = useAppDispatch();
 	const { data: plugins, isLoading } = useGetPluginsQuery();
 	const [selectedPluginId, setSelectedPluginId] = useQueryState("plugin");
@@ -91,7 +93,7 @@ export default function ObservabilityView() {
 
 	const supportedPlatforms = useMemo(() => supportedPlatformsList(resolvedTheme || "light"), [resolvedTheme]);
 
-	// Map UI tab IDs to actual plugin names (prometheus tab uses telemetry plugin)
+	// 将 UI tab id 映射到实际 plugin name；prometheus tab 使用 telemetry plugin。
 	const getPluginNameForTab = (tabId: string) => (tabId === "prometheus" ? "telemetry" : tabId);
 
 	useEffect(() => {
@@ -138,7 +140,7 @@ export default function ObservabilityView() {
 				<div className="flex w-[270px] flex-col gap-2 pb-10">
 					<div className="rounded-md bg-zinc-100/10 p-4 dark:bg-zinc-800/20">
 						<div className="flex flex-col gap-1">
-							<div className="text-muted-foreground mb-2 text-xs font-medium">Providers</div>
+							<div className="text-muted-foreground mb-2 text-xs font-medium">{t("observability.page.providers")}</div>
 							{supportedPlatforms.map((tab) => (
 								<button
 									type="button"
@@ -171,7 +173,7 @@ export default function ObservabilityView() {
 									)}
 									{tab.disabled && (
 										<Badge variant="secondary" className="text-muted-foreground ml-auto text-[10px] font-medium">
-											{"Coming soon".toUpperCase()}
+											{t("observability.common.comingSoon").toUpperCase()}
 										</Badge>
 									)}
 								</button>

@@ -3,6 +3,7 @@ import { Parameter } from "./types";
 import { cn } from "@/lib/utils";
 import { ComboboxSelect } from "@/components/ui/combobox";
 import FieldLabel from "./fieldLabel";
+import { useTranslation } from "react-i18next";
 
 interface Props {
 	field: Parameter;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function SelectFieldView(props: Props) {
+	const { t } = useTranslation();
 	const { field, config } = props;
 	const value = field.accesorKey ? (config[field.id] as any)?.[field.accesorKey] || "" : config[field.id];
 
@@ -56,7 +58,7 @@ export default function SelectFieldView(props: Props) {
 					value={Array.isArray(value) ? value : []}
 					onValueChange={(vals) => props.onChange(field.accesorKey ? { [field.accesorKey]: vals } : vals)}
 					disabled={props.disabled}
-					placeholder={`Add ${field.label}`}
+					placeholder={t("common.select.addLabel", { label: field.label })}
 					className="h-8"
 				/>
 			) : (
@@ -65,7 +67,7 @@ export default function SelectFieldView(props: Props) {
 					value={(value as string) || null}
 					onValueChange={onFieldChange}
 					disabled={props.disabled}
-					placeholder="Select"
+					placeholder={t("common.select.placeholder")}
 					disableSearch
 					className="h-8"
 				/>

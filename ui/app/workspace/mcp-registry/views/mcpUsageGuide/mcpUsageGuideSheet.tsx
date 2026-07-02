@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Check, Globe2, KeyRound, Server, SquareTerminal } from "lucide-react";
 import { parseAsArrayOf, parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { HARNESSES } from "./harnesses";
 import { PlatformSelect } from "./platformSelect";
 import type { HarnessID, HarnessPlatform, ServerScope, VirtualKeyOption } from "./types";
@@ -20,6 +21,7 @@ const HARNESS_PLATFORMS: HarnessPlatform[] = ["macos", "windows", "linux"];
 const SERVER_SCOPES: ServerScope[] = ["all", "selected"];
 
 export function MCPUsageGuideSheet() {
+	const { t } = useTranslation();
 	// ── URL-persisted settings (survive refresh) ─────────────────────────
 	// All user-facing selections live in query params so the install wizard
 	// can be reconstructed exactly after a reload or shared via the URL.
@@ -126,7 +128,7 @@ export function MCPUsageGuideSheet() {
 		<>
 			<Button type="button" onClick={() => setOpen(true)} data-testid="mcp-usage-guide-trigger" variant="outline" className="h-8">
 				<SquareTerminal />
-				<span className="hidden sm:inline">Connect agent</span>
+				<span className="hidden sm:inline">{t("mcpRegistry.usageGuide.trigger")}</span>
 			</Button>
 
 			<Sheet open={open} onOpenChange={setOpen}>
@@ -134,8 +136,8 @@ export function MCPUsageGuideSheet() {
 					<SheetHeader className="flex flex-col items-start px-0 py-4" headerClassName="mb-0 sticky px-8 -top-4 bg-card z-10">
 						<div className="flex items-center gap-2">
 							<div>
-								<SheetTitle>Install Bifrost MCP</SheetTitle>
-								<SheetDescription>Build a copy-ready command or config for your agent harness.</SheetDescription>
+								<SheetTitle>{t("mcpRegistry.usageGuide.title")}</SheetTitle>
+								<SheetDescription>{t("mcpRegistry.usageGuide.description")}</SheetDescription>
 							</div>
 						</div>
 					</SheetHeader>
@@ -144,7 +146,7 @@ export function MCPUsageGuideSheet() {
 						{/* ── Harness selector tabs ───────────────────────── */}
 						<section className="flex flex-col gap-2 transition-[border-color,background-color] duration-150 ease-out">
 							<div className="flex items-center gap-2 text-sm font-medium">
-								<span>Harness</span>
+								<span>{t("mcpRegistry.usageGuide.sections.harness")}</span>
 							</div>
 							<Tabs value={harness} onValueChange={(value) => setUrlState({ harness: value as HarnessID })}>
 								<TabsList className="no-scrollbar flex w-full flex-row justify-start overflow-x-auto rounded-sm">
@@ -163,7 +165,7 @@ export function MCPUsageGuideSheet() {
 						{/* ── Virtual key picker ─────────────────────────── */}
 						<section className="flex flex-col gap-2 transition-[border-color,background-color] duration-150 ease-out">
 							<div className="flex items-center gap-2 text-sm font-medium">
-								<span>Virtual key</span>
+								<span>{t("mcpRegistry.usageGuide.sections.virtualKey")}</span>
 							</div>
 							<SearchSelect<VirtualKeyOption>
 								async
@@ -187,7 +189,7 @@ export function MCPUsageGuideSheet() {
 										data-testid="mcp-usage-guide-vk-select"
 									>
 										<KeyRound className="text-muted-foreground size-4" />
-										<span className="truncate">{selectedVirtualKey?.name ?? "Search virtual keys"}</span>
+										<span className="truncate">{selectedVirtualKey?.name ?? t("mcpRegistry.usageGuide.virtualKey.search")}</span>
 										{selectedVirtualKey && (
 											<span className="text-muted-foreground ml-auto hidden font-mono text-xs sm:inline">
 												{maskSecret(selectedVirtualKey.value)}
@@ -204,8 +206,8 @@ export function MCPUsageGuideSheet() {
 										{selectedVirtualKey?.id === option.virtualKey.id && <Check className="ml-auto size-4 text-green-600" />}
 									</div>
 								)}
-								searchPlaceholder="Search virtual keys..."
-								emptyMessage="No active virtual keys found."
+								searchPlaceholder={t("mcpRegistry.usageGuide.virtualKey.searchPlaceholder")}
+								emptyMessage={t("mcpRegistry.usageGuide.virtualKey.empty")}
 								align="start"
 								className="w-full"
 								contentClassName="w-[var(--radix-popover-trigger-width)]"
@@ -216,7 +218,7 @@ export function MCPUsageGuideSheet() {
 						{selectedVirtualKey && (
 							<section className="flex flex-col gap-2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none">
 								<div className="flex items-center gap-2 text-sm font-medium">
-									<span>Server access</span>
+									<span>{t("mcpRegistry.usageGuide.sections.serverAccess")}</span>
 								</div>
 								<div className="grid gap-2 sm:grid-cols-2">
 									<button
@@ -229,7 +231,7 @@ export function MCPUsageGuideSheet() {
 										data-testid="mcp-usage-guide-server-scope-all"
 									>
 										<Globe2 className="text-muted-foreground size-4" />
-										<span className="font-medium">All servers</span>
+										<span className="font-medium">{t("mcpRegistry.usageGuide.serverScope.all")}</span>
 										{serverScope === "all" && <Check className="ml-auto size-4 text-green-600" />}
 									</button>
 									<button
@@ -242,7 +244,7 @@ export function MCPUsageGuideSheet() {
 										data-testid="mcp-usage-guide-server-scope-selected"
 									>
 										<Server className="text-muted-foreground size-4" />
-										<span className="font-medium">Selected servers</span>
+										<span className="font-medium">{t("mcpRegistry.usageGuide.serverScope.selected")}</span>
 										{serverScope === "selected" && <Check className="ml-auto size-4 text-green-600" />}
 									</button>
 								</div>
@@ -254,8 +256,10 @@ export function MCPUsageGuideSheet() {
 											defaultValue={urlState.servers}
 											resetOnDefaultValueChange
 											onValueChange={(ids) => setUrlState({ servers: ids })}
-											placeholder={isFetchingMCPClients ? "Loading allowed servers..." : "Select allowed MCP servers"}
-											emptyIndicator="No allowed MCP servers found."
+											placeholder={
+												isFetchingMCPClients ? t("mcpRegistry.usageGuide.servers.loading") : t("mcpRegistry.usageGuide.servers.select")
+											}
+											emptyIndicator={t("mcpRegistry.usageGuide.servers.empty")}
 											maxCount={3}
 											className="border-input text-foreground hover:bg-accent hover:text-accent-foreground h-8 rounded-sm bg-transparent font-normal"
 											popoverClassName="w-[var(--radix-popover-trigger-width)]"
@@ -270,7 +274,7 @@ export function MCPUsageGuideSheet() {
 						{selectedVirtualKey && activeHarness.usesPlatform && (
 							<section className="flex flex-col gap-2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none">
 								<div className="flex items-center gap-2 text-sm font-medium">
-									<span>Platform</span>
+									<span>{t("mcpRegistry.usageGuide.sections.platform")}</span>
 								</div>
 								<PlatformSelect platform={platform} onPlatformChange={(value) => setUrlState({ platform: value })} />
 							</section>

@@ -3,73 +3,70 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import GradientHeader from "@/components/ui/gradientHeader";
 import { BookOpen, Code, ExternalLink, FileText, GitBranch, Play, Shield, Users, Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const docSections = [
 	{
-		title: "Quick Start",
-		description: "Get Bifrost running in under 30 seconds",
+		id: "quick-start",
+		translationKey: "quickStart",
 		icon: Play,
 		url: "https://github.com/maximhq/bifrost/tree/main/docs/quickstart",
-		badge: "Popular",
-		items: ["HTTP Transport Setup", "Go Package Usage", "Docker Guide"],
+		badgeKey: "popular",
+		itemKeys: ["httpTransportSetup", "goPackageUsage", "dockerGuide"],
 	},
 	{
-		title: "Architecture",
-		description: "Deep dive into Bifrost's design and performance",
+		id: "architecture",
+		translationKey: "architecture",
 		icon: GitBranch,
 		url: "https://github.com/maximhq/bifrost/tree/main/docs/architecture",
-		items: ["System Overview", "Request Flow", "Concurrency Model", "Design Decisions"],
+		itemKeys: ["systemOverview", "requestFlow", "concurrencyModel", "designDecisions"],
 	},
 	{
-		title: "Usage Guides",
-		description: "Complete API reference and configuration guides",
+		id: "usage-guides",
+		translationKey: "usageGuides",
 		icon: BookOpen,
 		url: "https://github.com/maximhq/bifrost/tree/main/docs/usage",
-		badge: "Comprehensive",
-		items: ["Providers Setup", "Key Management", "Error Handling", "Memory & Networking"],
+		badgeKey: "comprehensive",
+		itemKeys: ["providersSetup", "keyManagement", "errorHandling", "memoryNetworking"],
 	},
 	{
-		title: "Contributing",
-		description: "Help improve Bifrost for everyone",
+		id: "contributing",
+		translationKey: "contributing",
 		icon: Users,
 		url: "https://github.com/maximhq/bifrost/tree/main/docs/contributing",
-		items: ["Contributing Guide", "Adding Providers", "Plugin Development", "Code Conventions"],
+		itemKeys: ["contributingGuide", "addingProviders", "pluginDevelopment", "codeConventions"],
 	},
 	{
-		title: "Integration Examples",
-		description: "Practical examples and testing code",
+		id: "integration-examples",
+		translationKey: "integrationExamples",
 		icon: Code,
 		url: "https://github.com/maximhq/bifrost/tree/main/docs/usage/http-transport/integrations",
-		items: ["OpenAI Integration", "Anthropic Integration", "GenAI Integration", "Migration Guides"],
+		itemKeys: ["openaiIntegration", "anthropicIntegration", "genaiIntegration", "migrationGuides"],
 	},
 	{
-		title: "Benchmarks",
-		description: "Performance metrics and guides",
+		id: "benchmarks",
+		translationKey: "benchmarks",
 		icon: Zap,
 		url: "https://github.com/maximhq/bifrost/blob/main/docs/benchmarks.md",
-		items: ["5K RPS Test Results", "Performance Metrics", "Configuration Tuning", "Hardware Comparisons"],
+		itemKeys: ["rpsResults", "performanceMetrics", "configurationTuning", "hardwareComparisons"],
 	},
 ];
 
 const featuredDocs = [
 	{
-		title: "MCP Documentation",
-		description: "Comprehensive guide to Model Context Protocol integration",
-		content: "Learn how to build sophisticated AI agents with MCP support, tool calling, and external integrations.",
+		id: "mcp-documentation",
+		translationKey: "mcpDocumentation",
 		href: "https://github.com/maximhq/bifrost/blob/main/docs/mcp.md",
 		icon: FileText,
-		buttonText: "View MCP Guide",
 		borderColor: "border-primary/20",
 		backgroundColor: "bg-primary/5",
 		iconColor: "text-primary",
 	},
 	{
-		title: "Governance Plugin",
-		description: "Complete access control, budgets, and rate limiting guide",
-		content: "Master Virtual Keys, hierarchical budgets, rate limiting, and usage tracking for secure AI infrastructure.",
+		id: "governance-plugin",
+		translationKey: "governancePlugin",
 		href: "https://github.com/maximhq/bifrost/blob/main/docs/governance.md",
 		icon: Shield,
-		buttonText: "View Governance Guide",
 		borderColor: "border-green-200 dark:border-green-800",
 		backgroundColor: "bg-green-50 dark:bg-green-950/20",
 		iconColor: "text-green-600",
@@ -77,6 +74,8 @@ const featuredDocs = [
 ];
 
 export default function DocsPage() {
+	const { t } = useTranslation();
+
 	return (
 		<div className="dark:bg-card bg-white">
 			<div className="mx-auto max-w-7xl">
@@ -85,12 +84,10 @@ export default function DocsPage() {
 					<div className="space-y-4 text-center">
 						<div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
 							<BookOpen className="h-4 w-4" />
-							<span className="font-semibold">Documentation</span>
+							<span className="font-semibold">{t("docsPage.hero.badge")}</span>
 						</div>
-						<GradientHeader title="Power Up Your Bifrost Stack" />
-						<p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-							Everything you need to know about building production AI applications with Bifrost
-						</p>
+						<GradientHeader title={t("docsPage.hero.title")} />
+						<p className="text-muted-foreground mx-auto max-w-2xl text-lg">{t("docsPage.hero.description")}</p>
 						<div className="flex justify-center gap-4">
 							<Button asChild>
 								<a
@@ -100,7 +97,7 @@ export default function DocsPage() {
 									data-testid="docs-view-full-documentation-link"
 								>
 									<ExternalLink className="mr-2 h-4 w-4" />
-									View Full Documentation
+									{t("docsPage.hero.viewFullDocumentation")}
 								</a>
 							</Button>
 							<Button variant="outline" asChild>
@@ -111,7 +108,7 @@ export default function DocsPage() {
 									data-testid="docs-quick-start-guide-link"
 								>
 									<Play className="mr-2 h-4 w-4" />
-									Quick Start Guide
+									{t("docsPage.hero.quickStartGuide")}
 								</a>
 							</Button>
 						</div>
@@ -122,28 +119,30 @@ export default function DocsPage() {
 						{docSections.map((section) => {
 							const Icon = section.icon;
 							return (
-								<Card key={section.title} className="group transition-all duration-200 hover:shadow-lg">
+								<Card key={section.id} className="group transition-all duration-200 hover:shadow-lg">
 									<CardHeader>
 										<div className="flex items-center justify-between">
 											<div className="bg-primary/10 group-hover:bg-primary/20 mb-4 flex h-12 w-12 items-center justify-center rounded-lg transition-colors">
 												<Icon className="text-primary h-6 w-6" />
 											</div>
-											{section.badge && (
+											{section.badgeKey && (
 												<Badge variant="secondary" className="text-xs">
-													{section.badge}
+													{t(`docsPage.badges.${section.badgeKey}`)}
 												</Badge>
 											)}
 										</div>
-										<CardTitle className="text-xl">{section.title}</CardTitle>
-										<CardDescription className="leading-relaxed">{section.description}</CardDescription>
+										<CardTitle className="text-xl">{t(`docsPage.sections.${section.translationKey}.title`)}</CardTitle>
+										<CardDescription className="leading-relaxed">
+											{t(`docsPage.sections.${section.translationKey}.description`)}
+										</CardDescription>
 									</CardHeader>
 									<CardContent className="flex h-full flex-col justify-between gap-8">
 										<div className="space-y-4">
 											<ul className="space-y-2">
-												{section.items.map((item, index) => (
-													<li key={index} className="text-muted-foreground flex items-center gap-2 text-sm">
+												{section.itemKeys.map((itemKey) => (
+													<li key={itemKey} className="text-muted-foreground flex items-center gap-2 text-sm">
 														<div className="bg-primary h-1.5 w-1.5 rounded-full" />
-														{item}
+														{t(`docsPage.sections.${section.translationKey}.items.${itemKey}`)}
 													</li>
 												))}
 											</ul>
@@ -154,9 +153,9 @@ export default function DocsPage() {
 												target="_blank"
 												rel="noopener noreferrer"
 												className="flex items-center justify-center gap-2"
-												data-testid={`docs-read-more-${section.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}
+												data-testid={`docs-read-more-${section.id}`}
 											>
-												Read More
+												{t("common.actions.readMore")}
 												<ExternalLink className="h-4 w-4" />
 											</a>
 										</Button>
@@ -169,25 +168,20 @@ export default function DocsPage() {
 					{/* Featured Documentation */}
 					<div className="grid gap-6 pt-8 md:grid-cols-2">
 						{featuredDocs.map((doc, index) => (
-							<Card className={`${doc.borderColor} ${doc.backgroundColor}`} key={index}>
+							<Card className={`${doc.borderColor} ${doc.backgroundColor}`} key={doc.id}>
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2">
 										<doc.icon className={`h-5 w-5 ${doc.iconColor}`} />
-										{doc.title}
+										{t(`docsPage.featured.${doc.translationKey}.title`)}
 									</CardTitle>
-									<CardDescription>{doc.description}</CardDescription>
+									<CardDescription>{t(`docsPage.featured.${doc.translationKey}.description`)}</CardDescription>
 								</CardHeader>
 								<CardContent>
-									<p className="text-muted-foreground mb-4 text-sm">{doc.content}</p>
+									<p className="text-muted-foreground mb-4 text-sm">{t(`docsPage.featured.${doc.translationKey}.content`)}</p>
 									<Button asChild className="w-full">
-										<a
-											href={doc.href}
-											target="_blank"
-											rel="noopener noreferrer"
-											data-testid={`docs-featured-${doc.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}
-										>
+										<a href={doc.href} target="_blank" rel="noopener noreferrer" data-testid={`docs-featured-${doc.id}`}>
 											<doc.icon className="mr-2 h-4 w-4" />
-											{doc.buttonText}
+											{t(`docsPage.featured.${doc.translationKey}.button`)}
 										</a>
 									</Button>
 								</CardContent>

@@ -7,24 +7,28 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const mcpLibrarySettingsSchema = z.object({
-	mcp_library_url: z
-		.string()
-		.trim()
-		.refine(
-			(value) => value === "" || value.startsWith("http://") || value.startsWith("https://"),
-			"URL must start with http:// or https://",
-		),
-	mcp_library_sync_interval_hours: z
-		.number({ message: "Sync interval is required" })
-		.min(1, "Sync interval must be at least 1 hour")
-		.max(8760, "Sync interval cannot exceed 8760 hours (1 year)"),
-});
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-type MCPLibrarySettingsFormData = z.infer<typeof mcpLibrarySettingsSchema>;
+const createMCPLibrarySettingsSchema = (t: Translate) =>
+	z.object({
+		mcp_library_url: z
+			.string()
+			.trim()
+			.refine(
+				(value) => value === "" || value.startsWith("http://") || value.startsWith("https://"),
+				t("mcpRegistry.library.settings.validation.urlProtocol"),
+			),
+		mcp_library_sync_interval_hours: z
+			.number({ message: t("mcpRegistry.library.settings.validation.syncIntervalRequired") })
+			.min(1, t("mcpRegistry.library.settings.validation.syncIntervalMin"))
+			.max(8760, t("mcpRegistry.library.settings.validation.syncIntervalMax")),
+	});
+
+type MCPLibrarySettingsFormData = z.infer<ReturnType<typeof createMCPLibrarySettingsSchema>>;
 
 interface MCPLibrarySettingsSheetProps {
 	open: boolean;
@@ -32,11 +36,13 @@ interface MCPLibrarySettingsSheetProps {
 }
 
 export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsSheetProps) {
+	const { t } = useTranslation();
 	const hasSettingsUpdateAccess = useRbac(RbacResource.Settings, RbacOperation.Update);
 	const { data: bifrostConfig, isLoading: isConfigLoading, isError: isConfigError } = useGetCoreConfigQuery({ fromDB: true });
 	const config = bifrostConfig?.framework_config;
 	const [updateCoreConfig, { isLoading }] = useUpdateCoreConfigMutation();
 	const [forceSyncMCPLibrary, { isLoading: isForceSyncing }] = useForceSyncMCPLibraryMutation();
+	const mcpLibrarySettingsSchema = useMemo(() => createMCPLibrarySettingsSchema(t), [t]);
 
 	const {
 		register,
@@ -71,7 +77,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 
 	const onSubmit = async (data: MCPLibrarySettingsFormData) => {
 		if (!bifrostConfig) {
-			toast.error("Unable to load current settings. Please retry.");
+			toast.error(t("mcpRegistry.library.settings.toasts.loadFailed"));
 			return;
 		}
 		try {
@@ -83,7 +89,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 					mcp_library_sync_interval: data.mcp_library_sync_interval_hours * 3600,
 				},
 			}).unwrap();
-			toast.success("MCP Library settings updated successfully.");
+			toast.success(t("mcpRegistry.library.settings.toasts.updated"));
 			reset(data);
 		} catch (error) {
 			toast.error(getErrorMessage(error));
@@ -93,7 +99,7 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 	const handleForceSync = async () => {
 		try {
 			await forceSyncMCPLibrary().unwrap();
-			toast.success("MCP Library sync triggered successfully.");
+			toast.success(t("mcpRegistry.library.settings.toasts.syncTriggered"));
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		}
@@ -103,18 +109,16 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 		<Sheet open={open} onOpenChange={(sheetOpen) => !sheetOpen && onClose()}>
 			<SheetContent className="flex w-full flex-col overflow-x-hidden px-0">
 				<SheetHeader className="flex flex-col items-start px-7 pt-8">
-					<SheetTitle>MCP Library Settings</SheetTitle>
-					<SheetDescription>Configure the sync source and interval for the MCP server catalog.</SheetDescription>
+					<SheetTitle>{t("mcpRegistry.library.settings.title")}</SheetTitle>
+					<SheetDescription>{t("mcpRegistry.library.settings.description")}</SheetDescription>
 				</SheetHeader>
 
 				<form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
 					<div className="flex-1 space-y-4 overflow-y-auto px-8">
 						<div className="space-y-2 rounded-sm border p-4">
 							<div className="space-y-0.5">
-								<Label htmlFor="mcp-library-url">Library Sync URL</Label>
-								<p className="text-muted-foreground text-sm">
-									URL to a custom MCP server catalog. Leave empty to use the default Bifrost catalog.
-								</p>
+								<Label htmlFor="mcp-library-url">{t("mcpRegistry.library.settings.fields.syncUrl")}</Label>
+								<p className="text-muted-foreground text-sm">{t("mcpRegistry.library.settings.fields.syncUrlDescription")}</p>
 							</div>
 							<Input
 								id="mcp-library-url"
@@ -129,8 +133,8 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 
 						<div className="space-y-2 rounded-sm border p-4">
 							<div className="space-y-0.5">
-								<Label htmlFor="mcp-library-sync-interval">Sync Interval (hours)</Label>
-								<p className="text-muted-foreground text-sm">How often to sync the MCP server catalog from the source URL.</p>
+								<Label htmlFor="mcp-library-sync-interval">{t("mcpRegistry.library.settings.fields.syncInterval")}</Label>
+								<p className="text-muted-foreground text-sm">{t("mcpRegistry.library.settings.fields.syncIntervalDescription")}</p>
 							</div>
 							<Input
 								id="mcp-library-sync-interval"
@@ -154,17 +158,17 @@ export function MCPLibrarySettingsSheet({ open, onClose }: MCPLibrarySettingsShe
 								disabled={isForceSyncing || !hasSettingsUpdateAccess}
 								data-testid="mcp-library-force-sync-btn"
 							>
-								{isForceSyncing ? "Syncing..." : "Force Sync Now"}
+								{isForceSyncing ? t("mcpRegistry.library.settings.actions.syncing") : t("mcpRegistry.library.settings.actions.forceSync")}
 							</Button>
 							<Button type="button" variant="outline" onClick={onClose} disabled={isLoading} data-testid="mcp-library-settings-cancel-btn">
-								Cancel
+								{t("common.actions.cancel")}
 							</Button>
 							<Button
 								type="submit"
 								disabled={!hasChanges || isLoading || isConfigLoading || isConfigError || !hasSettingsUpdateAccess}
 								data-testid="mcp-library-settings-save-btn"
 							>
-								{isLoading ? "Saving..." : "Save Changes"}
+								{isLoading ? t("common.actions.saving") : t("common.actions.saveChanges")}
 							</Button>
 						</div>
 					</div>

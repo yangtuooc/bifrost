@@ -2,6 +2,7 @@ import { getErrorMessage, useAppSelector, useUpdatePluginMutation } from "@/lib/
 import { type SecretVar, PrometheusFormSchema } from "@/lib/types/schemas";
 import { toOptionalSecretVarPayload } from "@/lib/utils/secretVarForm";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PrometheusFormFragment } from "../../fragments/prometheusFormFragment";
 
@@ -28,6 +29,7 @@ interface PrometheusViewProps {
 }
 
 export default function PrometheusView({ onDelete, isDeleting }: PrometheusViewProps) {
+	const { t } = useTranslation();
 	const selectedPlugin = useAppSelector((state) => state.plugin.selectedPlugin);
 	const currentConfig = useMemo(() => {
 		const telemetryConfig = (selectedPlugin?.config as TelemetryConfig) ?? {};
@@ -60,8 +62,7 @@ export default function PrometheusView({ onDelete, isDeleting }: PrometheusViewP
 				pushGatewayConfig.basic_auth = { username, password };
 			}
 
-			// Plugin stays loaded as long as the connector exists; the two inner
-			// toggles independently control the /metrics endpoint and push gateway.
+			// 只要 connector 存在，plugin 就保持加载；两个内部开关分别控制 /metrics endpoint 和 push gateway。
 			updatePlugin({
 				name: "telemetry",
 				data: {
@@ -75,10 +76,10 @@ export default function PrometheusView({ onDelete, isDeleting }: PrometheusViewP
 				.unwrap()
 				.then(() => {
 					resolve();
-					toast.success("Prometheus configuration updated successfully");
+					toast.success(t("observability.prometheus.toasts.updated"));
 				})
 				.catch((err) => {
-					toast.error("Failed to update Prometheus configuration", {
+					toast.error(t("observability.prometheus.toasts.updateFailed"), {
 						description: getErrorMessage(err),
 					});
 					reject(err);

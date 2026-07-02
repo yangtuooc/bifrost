@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { CheckIcon, ChevronDown, XCircle, XIcon } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -286,7 +287,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 			onValueChange,
 			variant,
 			defaultValue = [],
-			placeholder = "Select options",
+			placeholder,
 			animation = 0,
 			animationConfig,
 			maxCount = 3,
@@ -311,6 +312,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 		},
 		ref,
 	) => {
+		const { t } = useTranslation();
+		const resolvedPlaceholder = placeholder ?? t("common.select.selectOptions");
 		const [selectedValues, setSelectedValues] = React.useState<string[]>(defaultValue);
 		const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
 		const [searchValue, setSearchValue] = React.useState("");
@@ -611,21 +614,25 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 					const addedLabels = addedItems.map((value) => allOptions.find((opt) => opt.value === value)?.label).filter(Boolean);
 
 					if (addedLabels.length === 1) {
-						announce(`${addedLabels[0]} selected. ${selectedCount} of ${totalOptions} options selected.`);
+						announce(
+							t("common.select.optionSelectedAnnouncement", { label: addedLabels[0], selected: selectedCount, total: totalOptions }),
+						);
 					} else {
-						announce(`${addedLabels.length} options selected. ${selectedCount} of ${totalOptions} total selected.`);
+						announce(
+							t("common.select.optionsSelectedAnnouncement", { count: addedLabels.length, selected: selectedCount, total: totalOptions }),
+						);
 					}
 				} else if (diff < 0) {
-					announce(`Option removed. ${selectedCount} of ${totalOptions} options selected.`);
+					announce(t("common.select.optionRemovedAnnouncement", { selected: selectedCount, total: totalOptions }));
 				}
 				prevSelectedCount.current = selectedCount;
 			}
 
 			if (isPopoverOpen !== prevIsOpen.current) {
 				if (isPopoverOpen) {
-					announce(`Dropdown opened. ${totalOptions} options available. Use arrow keys to navigate.`);
+					announce(t("common.select.dropdownOpened", { count: totalOptions }));
 				} else {
-					announce("Dropdown closed.");
+					announce(t("common.select.dropdownClosed"));
 				}
 				prevIsOpen.current = isPopoverOpen;
 			}
@@ -637,11 +644,11 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							opt.label.toLowerCase().includes(searchValue.toLowerCase()) || opt.value.toLowerCase().includes(searchValue.toLowerCase()),
 					).length;
 
-					announce(`${filteredCount} option${filteredCount === 1 ? "" : "s"} found for "${searchValue}"`);
+					announce(t("common.select.filteredOptionsFound", { count: filteredCount, query: searchValue }));
 				}
 				prevSearchValue.current = searchValue;
 			}
-		}, [selectedValues, isPopoverOpen, searchValue, announce, getAllOptions]);
+		}, [selectedValues, isPopoverOpen, searchValue, announce, getAllOptions, t]);
 
 		return (
 			<>
@@ -656,15 +663,18 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 
 				<Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={modalPopover}>
 					<div id={triggerDescriptionId} className="sr-only">
-						Multi-select dropdown. Use arrow keys to navigate, Enter to select, and Escape to close.
+						{t("common.select.dropdownDescription")}
 					</div>
 					<div id={selectedCountId} className="sr-only" aria-live="polite">
 						{selectedValues.length === 0
-							? "No options selected"
-							: `${selectedValues.length} option${selectedValues.length === 1 ? "" : "s"} selected: ${selectedValues
-									.map((value) => getOptionByValue(value)?.label)
-									.filter(Boolean)
-									.join(", ")}`}
+							? t("common.select.noOptionsSelected")
+							: t("common.select.optionsSelectedSummary", {
+									count: selectedValues.length,
+									items: selectedValues
+										.map((value) => getOptionByValue(value)?.label)
+										.filter(Boolean)
+										.join(", "),
+								})}
 					</div>
 
 					<PopoverTrigger asChild>
@@ -677,7 +687,11 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 							aria-haspopup="listbox"
 							aria-controls={isPopoverOpen ? listboxId : undefined}
 							aria-describedby={`${triggerDescriptionId} ${selectedCountId}`}
-							aria-label={`Multi-select: ${selectedValues.length} of ${getAllOptions().length} options selected. ${placeholder}`}
+							aria-label={t("common.select.triggerAria", {
+								selected: selectedValues.length,
+								total: getAllOptions().length,
+								placeholder: resolvedPlaceholder,
+							})}
 							className={cn(
 								"flex h-auto min-h-9 items-center justify-between rounded-md border p-1 shadow-none [&_svg]:pointer-events-auto",
 								autoSize ? "w-auto" : "w-full",
@@ -766,7 +780,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 																	toggleOption(value);
 																}
 															}}
-															aria-label={`Remove ${option.label} from selection`}
+															aria-label={t("common.select.removeFromSelection", { label: option.label })}
 															className="ring-none -m-0.5 ml-2 h-4 w-4 cursor-pointer rounded-sm focus:outline-none"
 														>
 															<XCircle className={cn("h-3 w-3", responsiveSettings.compactMode && "h-2.5 w-2.5")} />
@@ -786,7 +800,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 													"[&>svg]:pointer-events-auto",
 												)}
 											>
-												{`+ ${selectedValues.length - responsiveSettings.maxCount} more`}
+												{t("common.select.moreSelected", { count: selectedValues.length - responsiveSettings.maxCount })}
 												<XCircle
 													className={cn("ml-2 h-4 w-4 cursor-pointer", responsiveSettings.compactMode && "ml-1 h-3 w-3")}
 													onClick={(event) => {
@@ -812,7 +826,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 													handleClear();
 												}
 											}}
-											aria-label={`Clear all ${selectedValues.length} selected options`}
+											aria-label={t("common.select.clearSelectedOptions", { count: selectedValues.length })}
 											className="text-muted-foreground hover:text-foreground mx-2 flex h-4 w-4 cursor-pointer items-center justify-center rounded-sm focus:outline-none"
 										>
 											<XIcon className="h-4 w-4" />
@@ -823,7 +837,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 								</div>
 							) : (
 								<div className="mx-auto flex w-full items-center justify-between">
-									<span className="text-muted-foreground mx-2 text-sm font-normal">{placeholder}</span>
+									<span className="text-muted-foreground mx-2 text-sm font-normal">{resolvedPlaceholder}</span>
 									<ChevronDown className="text-muted-foreground mx-2 h-4 cursor-pointer" />
 								</div>
 							)}
@@ -833,7 +847,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 						id={listboxId}
 						role="listbox"
 						aria-multiselectable="true"
-						aria-label="Available options"
+						aria-label={t("common.select.availableOptions")}
 						className={cn("w-full overflow-hidden p-0", popoverClassName)}
 						style={{
 							touchAction: "manipulation",
@@ -847,17 +861,17 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 						<Command className={cn("flex w-full flex-col", commandClassName)}>
 							{searchable && (
 								<CommandInput
-									placeholder="Search options..."
+									placeholder={t("common.select.searchOptions")}
 									onKeyDown={handleInputKeyDown}
 									value={searchValue}
 									onValueChange={setSearchValue}
-									aria-label="Search through available options"
+									aria-label={t("common.select.searchAvailableOptions")}
 									aria-describedby={`${multiSelectId}-search-help`}
 								/>
 							)}
 							{searchable && (
 								<div id={`${multiSelectId}-search-help`} className="sr-only">
-									Type to filter options. Use arrow keys to navigate results.
+									{t("common.select.searchHelp")}
 								</div>
 							)}
 							<CommandList
@@ -871,7 +885,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 									scrollbarColor: "rgba(156, 163, 175, 0.5) transparent",
 								}}
 							>
-								<CommandEmpty>{emptyIndicator || "No results found."}</CommandEmpty>{" "}
+								<CommandEmpty>{emptyIndicator || t("common.select.noResults")}</CommandEmpty>{" "}
 								{!hideSelectAll && !searchValue && (
 									<CommandGroup>
 										<CommandItem
@@ -879,7 +893,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 											onSelect={toggleAll}
 											role="option"
 											aria-selected={selectedValues.length === getAllOptions().filter((opt) => !opt.disabled).length}
-											aria-label={`Select all ${getAllOptions().length} options`}
+											aria-label={t("common.select.selectAllOptions", { count: getAllOptions().length })}
 											className="cursor-pointer"
 										>
 											<div
@@ -894,8 +908,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 												<CheckIcon className="text-secondary bg-primary h-4 w-4 rounded-md" />
 											</div>
 											<span>
-												(Select All
-												{getAllOptions().length > 20 ? ` - ${getAllOptions().length} options` : ""})
+												{t("common.select.selectAll", {
+													suffix:
+														getAllOptions().length > 20 ? t("common.select.optionCountSuffix", { count: getAllOptions().length }) : "",
+												})}
 											</span>
 										</CommandItem>
 									</CommandGroup>
@@ -913,8 +929,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 														aria-selected={isSelected}
 														aria-disabled={option.disabled}
 														aria-label={`${option.label}${
-															isSelected ? ", selected" : ", not selected"
-														}${option.disabled ? ", disabled" : ""}`}
+															isSelected ? `, ${t("common.select.optionStateSelected")}` : `, ${t("common.select.optionStateNotSelected")}`
+														}${option.disabled ? `, ${t("common.select.optionStateDisabled")}` : ""}`}
 														className={cn("cursor-pointer", option.disabled && "cursor-not-allowed opacity-50")}
 														disabled={option.disabled}
 													>
@@ -946,8 +962,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 													aria-selected={isSelected}
 													aria-disabled={option.disabled}
 													aria-label={`${option.label}${
-														isSelected ? ", selected" : ", not selected"
-													}${option.disabled ? ", disabled" : ""}`}
+														isSelected ? `, ${t("common.select.optionStateSelected")}` : `, ${t("common.select.optionStateNotSelected")}`
+													}${option.disabled ? `, ${t("common.select.optionStateDisabled")}` : ""}`}
 													className={cn("cursor-pointer", option.disabled && "cursor-not-allowed opacity-50")}
 													disabled={option.disabled}
 												>
@@ -976,7 +992,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
 											<>
 												<Separator orientation="vertical" className="flex h-full min-h-6" />
 												<CommandItem onSelect={handleClear} className="flex-1 cursor-pointer justify-center">
-													Clear
+													{t("common.actions.clear")}
 												</CommandItem>
 											</>
 										)}

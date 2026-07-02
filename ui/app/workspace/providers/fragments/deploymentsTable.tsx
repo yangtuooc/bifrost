@@ -11,6 +11,7 @@ import { SecretVar } from "@/lib/types/schemas";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Trash } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type DeploymentsValue = Record<string, AliasConfig> | undefined | null;
 
@@ -126,13 +127,15 @@ interface ProviderSectionProps {
 }
 
 function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="space-y-4">
 			<SectionHeader
-				title="Azure overrides"
-				description="Override key-level Azure defaults for this deployment. Leave blank to use the key's settings."
+				title={t("providers.keys.deployments.sections.azureTitle")}
+				description={t("providers.keys.deployments.sections.azureDescription")}
 			/>
-			<FieldRow label="API version" hint="Override the Azure OpenAI api-version query parameter.">
+			<FieldRow label={t("providers.keys.deployments.fields.apiVersion")} hint={t("providers.keys.deployments.fields.apiVersionHint")}>
 				<StringField
 					value={config.api_version}
 					onChange={(v) => onChange({ api_version: v })}
@@ -140,7 +143,10 @@ function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
 					disabled={disabled}
 				/>
 			</FieldRow>
-			<FieldRow label="Anthropic version" hint="Override the anthropic-version header for Claude-on-Azure deployments.">
+			<FieldRow
+				label={t("providers.keys.deployments.fields.anthropicVersion")}
+				hint={t("providers.keys.deployments.fields.anthropicVersionHint")}
+			>
 				<StringField
 					value={config.anthropic_version}
 					onChange={(v) => onChange({ anthropic_version: v })}
@@ -148,7 +154,7 @@ function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
 					disabled={disabled}
 				/>
 			</FieldRow>
-			<FieldRow label="Endpoint" hint="Point this deployment at a different Azure resource than the key default.">
+			<FieldRow label={t("providers.keys.deployments.fields.endpoint")} hint={t("providers.keys.deployments.fields.endpointHint")}>
 				<SecretVarField
 					value={config.endpoint}
 					onChange={(v) => onChange({ endpoint: v })}
@@ -161,13 +167,15 @@ function AzureSection({ config, onChange, disabled }: ProviderSectionProps) {
 }
 
 function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="space-y-4">
 			<SectionHeader
-				title="Vertex overrides"
-				description="Override key-level Vertex defaults for this deployment. Leave blank to use the key's settings."
+				title={t("providers.keys.deployments.sections.vertexTitle")}
+				description={t("providers.keys.deployments.sections.vertexDescription")}
 			/>
-			<FieldRow label="Project ID">
+			<FieldRow label={t("providers.keys.deployments.fields.projectId")}>
 				<SecretVarField
 					value={config.project_id}
 					onChange={(v) => onChange({ project_id: v })}
@@ -175,7 +183,10 @@ function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 					disabled={disabled}
 				/>
 			</FieldRow>
-			<FieldRow label="Project number" hint="Required for fine-tuned models.">
+			<FieldRow
+				label={t("providers.keys.deployments.fields.projectNumber")}
+				hint={t("providers.keys.deployments.fields.projectNumberHint")}
+			>
 				<SecretVarField
 					value={config.project_number}
 					onChange={(v) => onChange({ project_number: v })}
@@ -183,7 +194,7 @@ function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 					disabled={disabled}
 				/>
 			</FieldRow>
-			<FieldRow label="Region">
+			<FieldRow label={t("providers.keys.deployments.fields.region")}>
 				<SecretVarField
 					value={config.region}
 					onChange={(v) => onChange({ region: v })}
@@ -196,13 +207,15 @@ function VertexSection({ config, onChange, disabled }: ProviderSectionProps) {
 }
 
 function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="space-y-4">
 			<SectionHeader
-				title="Bedrock overrides"
-				description="Override key-level Bedrock defaults for this deployment. Leave blank to use the key's settings."
+				title={t("providers.keys.deployments.sections.bedrockTitle")}
+				description={t("providers.keys.deployments.sections.bedrockDescription")}
 			/>
-			<FieldRow label="Region">
+			<FieldRow label={t("providers.keys.deployments.fields.region")}>
 				<SecretVarField
 					value={config.region}
 					onChange={(v) => onChange({ region: v })}
@@ -210,7 +223,10 @@ function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
 					disabled={disabled}
 				/>
 			</FieldRow>
-			<FieldRow label="Inference profile ARN" hint="Cross-region inference profile ARN to invoke instead of the model ID.">
+			<FieldRow
+				label={t("providers.keys.deployments.fields.inferenceProfileArn")}
+				hint={t("providers.keys.deployments.fields.inferenceProfileArnHint")}
+			>
 				<SecretVarField
 					value={config.inference_profile_arn}
 					onChange={(v) => onChange({ inference_profile_arn: v })}
@@ -223,15 +239,18 @@ function BedrockSection({ config, onChange, disabled }: ProviderSectionProps) {
 }
 
 function ReplicateSection({ config, onChange, disabled }: ProviderSectionProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="space-y-4">
-			<SectionHeader title="Replicate overrides" description="Override key-level Replicate defaults for this deployment." />
+			<SectionHeader
+				title={t("providers.keys.deployments.sections.replicateTitle")}
+				description={t("providers.keys.deployments.sections.replicateDescription")}
+			/>
 			<div className="flex items-start justify-between gap-4 rounded-md border p-3">
 				<div className="space-y-0.5">
-					<label className="text-sm font-medium">Use deployments endpoint</label>
-					<p className="text-muted-foreground text-xs">
-						Route through Replicate&apos;s deployments endpoint instead of the models endpoint.
-					</p>
+					<label className="text-sm font-medium">{t("providers.keys.deployments.fields.useDeploymentsEndpoint")}</label>
+					<p className="text-muted-foreground text-xs">{t("providers.keys.deployments.fields.useDeploymentsEndpointHint")}</p>
 				</div>
 				<Switch
 					checked={config.use_deployments_endpoint ?? false}
@@ -269,10 +288,15 @@ function ExpandedConfigPanel({
 	providerName: string;
 	disabled?: boolean;
 }) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="space-y-6 border-t p-4">
 			<div className="space-y-4">
-				<FieldRow label="Canonical model name" hint="The canonical name used for routing and pricing. Defaults to the model ID when blank.">
+				<FieldRow
+					label={t("providers.keys.deployments.fields.canonicalModelName")}
+					hint={t("providers.keys.deployments.fields.canonicalModelNameHint")}
+				>
 					<StringField
 						value={config.model_name}
 						onChange={(v) => onChange({ model_name: v })}
@@ -280,17 +304,17 @@ function ExpandedConfigPanel({
 						disabled={disabled}
 					/>
 				</FieldRow>
-				<FieldRow label="Model family" hint="Forces the family used for routing decisions. Derived from model name when left blank.">
+				<FieldRow label={t("providers.keys.deployments.fields.modelFamily")} hint={t("providers.keys.deployments.fields.modelFamilyHint")}>
 					<Select
 						value={config.model_family ?? "__none__"}
 						onValueChange={(v) => onChange({ model_family: v === "__none__" ? undefined : (v as ModelFamily) })}
 						disabled={disabled}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select a model family" />
+							<SelectValue placeholder={t("providers.keys.deployments.fields.selectModelFamily")} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="__none__">None</SelectItem>
+							<SelectItem value="__none__">{t("providers.keys.deployments.fields.none")}</SelectItem>
 							{ModelFamilyValues.map((f) => (
 								<SelectItem key={f} value={f}>
 									{f}
@@ -299,14 +323,14 @@ function ExpandedConfigPanel({
 						</SelectContent>
 					</Select>
 				</FieldRow>
-				<FieldRow label="Description" hint="Note for users. Not used by Bifrost.">
+				<FieldRow label={t("providers.keys.deployments.fields.description")} hint={t("providers.keys.deployments.fields.descriptionHint")}>
 					<Textarea
 						value={config.description ?? ""}
 						onChange={(e) => {
 							const v = e.target.value;
 							onChange({ description: v === "" ? undefined : v });
 						}}
-						placeholder="What is this deployment used for?"
+						placeholder={t("providers.keys.deployments.fields.descriptionPlaceholder")}
 						rows={2}
 						disabled={disabled}
 					/>
@@ -318,6 +342,7 @@ function ExpandedConfigPanel({
 }
 
 export function DeploymentsTable({ value, onChange, providerName, disabled = false }: Props) {
+	const { t } = useTranslation();
 	const normalized = useMemo(() => normalize(value), [value]);
 	const rows: Row[] = useMemo(() => Object.entries(normalized).map(([name, config]) => ({ name, config })), [normalized]);
 
@@ -439,9 +464,9 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 		<div className="overflow-hidden rounded-md border">
 			<div className="bg-muted/50 text-foreground grid h-10 grid-cols-[28px_1fr_1fr_28px] items-center gap-2 border-b px-4 text-sm font-medium">
 				<div />
-				<div>Deployment name</div>
-				<div>Model ID</div>
-				<span className="sr-only">Actions</span>
+				<div>{t("providers.keys.deployments.table.deploymentName")}</div>
+				<div>{t("providers.keys.deployments.table.modelId")}</div>
+				<span className="sr-only">{t("providers.keys.deployments.table.actions")}</span>
 			</div>
 			<div className="divide-y">
 				{rowsWithIds.map((row) => {
@@ -466,13 +491,15 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 										<Input
 											value={pending ?? row.name}
 											onChange={(e) => renameRow(row.rowId, row.name, e.target.value)}
-											placeholder="Request model name"
+											placeholder={t("providers.keys.deployments.table.requestModelNamePlaceholder")}
 											disabled={disabled}
 											data-testid={`deployment-name-${row.name}`}
 										/>
 										{pending !== undefined && (
 											<p className="text-destructive text-xs">
-												{pending.trim() === "" ? "Name cannot be empty." : "A deployment with this name already exists."}
+												{pending.trim() === ""
+													? t("providers.keys.deployments.table.nameCannotBeEmpty")
+													: t("providers.keys.deployments.table.duplicateName")}
 											</p>
 										)}
 									</div>
@@ -481,7 +508,7 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 										provider={providerName}
 										value={row.config.model_id}
 										onChange={(v) => patchConfig(row.name, { model_id: typeof v === "string" ? v : "" })}
-										placeholder="Deployment / profile / resource ID"
+										placeholder={t("providers.keys.deployments.table.deploymentResourcePlaceholder")}
 										disabled={disabled}
 										unfiltered={true}
 										data-testid={`deployment-model-${row.name}`}
@@ -528,7 +555,7 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 										commitDraftIfReady();
 									}
 								}}
-								placeholder="Request model name"
+								placeholder={t("providers.keys.deployments.table.requestModelNamePlaceholder")}
 								disabled={disabled}
 								data-testid="draft-deployment-name"
 							/>
@@ -542,7 +569,7 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 									setDraftRow(nextDraft);
 									commitDraftIfReady(nextDraft);
 								}}
-								placeholder="Deployment / profile / resource ID"
+								placeholder={t("providers.keys.deployments.table.deploymentResourcePlaceholder")}
 								disabled={disabled}
 								unfiltered={true}
 								data-testid="draft-deployment-model"
@@ -551,9 +578,7 @@ export function DeploymentsTable({ value, onChange, providerName, disabled = fal
 						</div>
 						{(draftRow.name.trim() !== "" || draftRow.config.model_id.trim() !== "") &&
 							!(draftRow.name.trim() && draftRow.config.model_id.trim()) && (
-								<p className="text-muted-foreground px-4 pb-2 text-xs">
-									Both deployment name and model ID are required — this row will not be saved until both are filled.
-								</p>
+								<p className="text-muted-foreground px-4 pb-2 text-xs">{t("providers.keys.deployments.table.draftIncomplete")}</p>
 							)}
 						<CollapsibleContent>
 							<ExpandedConfigPanel config={draftRow.config} onChange={patchDraftConfig} providerName={providerName} disabled={disabled} />

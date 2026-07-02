@@ -10,6 +10,7 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
 
@@ -18,6 +19,7 @@ interface PerformanceFormFragmentProps {
 }
 
 export function PerformanceFormFragment({ provider }: PerformanceFormFragmentProps) {
+	const { t } = useTranslation();
 	const dispatch = useAppDispatch();
 	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
@@ -38,7 +40,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 	}, [form.formState.isDirty]);
 
 	useEffect(() => {
-		// Reset form with new provider's concurrency_and_buffer_size when provider changes
+		// Provider 切换时重置 concurrency_and_buffer_size。
 		form.reset({
 			concurrency_and_buffer_size: {
 				concurrency: provider.concurrency_and_buffer_size?.concurrency ?? DefaultPerformanceConfig.concurrency,
@@ -48,7 +50,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 	}, [form, provider.name, provider.concurrency_and_buffer_size]);
 
 	const onSubmit = (data: PerformanceFormSchema) => {
-		// Create updated provider configuration (raw request/response are in Debugging tab)
+		// 创建更新后的 Provider 配置，raw request/response 由 Debugging tab 管理。
 		const updatedProvider = buildProviderUpdatePayload(provider, {
 			concurrency_and_buffer_size: {
 				concurrency: data.concurrency_and_buffer_size.concurrency,
@@ -58,11 +60,11 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 		updateProvider(updatedProvider)
 			.unwrap()
 			.then(() => {
-				toast.success("Provider configuration updated successfully");
+				toast.success(t("providers.config.performance.toasts.updated"));
 				form.reset(data);
 			})
 			.catch((err) => {
-				toast.error("Failed to update provider configuration", {
+				toast.error(t("providers.config.performance.toasts.updateFailed"), {
 					description: getErrorMessage(err),
 				});
 			});
@@ -71,7 +73,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 	return (
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 px-6">
-				{/* Performance Configuration */}
+				{/* 性能配置 */}
 				<div className="space-y-4">
 					<div className="flex flex-row gap-4">
 						<div className="flex-1">
@@ -80,7 +82,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 								name="concurrency_and_buffer_size.concurrency"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Concurrency</FormLabel>
+										<FormLabel>{t("providers.config.performance.fields.concurrency")}</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
@@ -113,7 +115,7 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 								name="concurrency_and_buffer_size.buffer_size"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Buffer Size</FormLabel>
+										<FormLabel>{t("providers.config.performance.fields.bufferSize")}</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
@@ -143,14 +145,14 @@ export function PerformanceFormFragment({ provider }: PerformanceFormFragmentPro
 					</div>
 				</div>
 
-				{/* Form Actions */}
+				{/* 表单操作 */}
 				<div className="mb-6 flex justify-end space-x-2">
 					<Button
 						type="submit"
 						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
 						isLoading={isUpdatingProvider}
 					>
-						Save Performance Configuration
+						{t("providers.config.performance.actions.save")}
 					</Button>
 				</div>
 			</form>

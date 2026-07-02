@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Info } from "lucide-react";
 import { useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { buildProviderUpdatePayload } from "../views/utils";
 
@@ -19,6 +20,7 @@ interface DebuggingFormFragmentProps {
 }
 
 export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) {
+	const { t } = useTranslation();
 	const dispatch = useAppDispatch();
 	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
@@ -58,11 +60,11 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 		updateProvider(updatedProvider)
 			.unwrap()
 			.then(() => {
-				toast.success("Debugging configuration updated successfully");
+				toast.success(t("providers.config.debugging.toasts.updated"));
 				form.reset(data);
 			})
 			.catch((err) => {
-				toast.error("Failed to update debugging configuration", {
+				toast.error(t("providers.config.debugging.toasts.updateFailed"), {
 					description: getErrorMessage(err),
 				});
 			});
@@ -72,7 +74,7 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 		<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6" data-testid="provider-config-debugging-content">
 				<div className="space-y-4">
-					{/* Send Back Raw Request */}
+					{/* 返回 Raw Request */}
 					<FormField
 						control={form.control}
 						name="send_back_raw_request"
@@ -81,21 +83,20 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 								<div className="flex items-center justify-between space-x-2">
 									<div className="space-y-0.5">
 										<div className="flex items-center gap-1.5">
-											<FormLabel>Send Back Raw Request</FormLabel>
+											<FormLabel>{t("providers.config.debugging.fields.sendBackRawRequest")}</FormLabel>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild data-testid="provider-debugging-send-back-raw-request-tooltip-trigger">
 														<Info className="text-muted-foreground h-3 w-3 cursor-pointer" />
 													</TooltipTrigger>
 													<TooltipContent>
-														Override per-request with header: <code>x-bf-send-back-raw-request: {String(!sendBackRawRequest)}</code>
+														{t("providers.config.debugging.tooltips.overrideHeader")}{" "}
+														<code>x-bf-send-back-raw-request: {String(!sendBackRawRequest)}</code>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
 										</div>
-										<p className="text-muted-foreground text-xs">
-											Include the raw provider request alongside the parsed request in the API response.
-										</p>
+										<p className="text-muted-foreground text-xs">{t("providers.config.debugging.descriptions.sendBackRawRequest")}</p>
 									</div>
 									<FormControl>
 										<Switch
@@ -114,7 +115,7 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 						)}
 					/>
 
-					{/* Send Back Raw Response */}
+					{/* 返回 Raw Response */}
 					<FormField
 						control={form.control}
 						name="send_back_raw_response"
@@ -123,21 +124,20 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 								<div className="flex items-center justify-between space-x-2">
 									<div className="space-y-0.5">
 										<div className="flex items-center gap-1.5">
-											<FormLabel>Send Back Raw Response</FormLabel>
+											<FormLabel>{t("providers.config.debugging.fields.sendBackRawResponse")}</FormLabel>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild data-testid="provider-debugging-send-back-raw-response-tooltip-trigger">
 														<Info className="text-muted-foreground h-3 w-3 cursor-pointer" />
 													</TooltipTrigger>
 													<TooltipContent>
-														Override per-request with header: <code>x-bf-send-back-raw-response: {String(!sendBackRawResponse)}</code>
+														{t("providers.config.debugging.tooltips.overrideHeader")}{" "}
+														<code>x-bf-send-back-raw-response: {String(!sendBackRawResponse)}</code>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
 										</div>
-										<p className="text-muted-foreground text-xs">
-											Include the raw provider response alongside the parsed response in the API response.
-										</p>
+										<p className="text-muted-foreground text-xs">{t("providers.config.debugging.descriptions.sendBackRawResponse")}</p>
 									</div>
 									<FormControl>
 										<Switch
@@ -156,7 +156,7 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 						)}
 					/>
 
-					{/* Store Raw Request/Response */}
+					{/* 存储 Raw Request/Response */}
 					<FormField
 						control={form.control}
 						name="store_raw_request_response"
@@ -165,20 +165,20 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 								<div className="flex items-center justify-between space-x-2">
 									<div className="space-y-0.5">
 										<div className="flex items-center gap-1.5">
-											<FormLabel>Store Raw Request/Response</FormLabel>
+											<FormLabel>{t("providers.config.debugging.fields.storeRawRequestResponse")}</FormLabel>
 											<TooltipProvider>
 												<Tooltip>
 													<TooltipTrigger asChild data-testid="provider-debugging-store-raw-request-response-tooltip-trigger">
 														<Info className="text-muted-foreground h-3 w-3 cursor-pointer" />
 													</TooltipTrigger>
 													<TooltipContent>
-														Override per-request with header:{" "}
+														{t("providers.config.debugging.tooltips.overrideHeader")}{" "}
 														<code>x-bf-store-raw-request-response: {String(!storeRawRequestResponse)}</code>
 													</TooltipContent>
 												</Tooltip>
 											</TooltipProvider>
 										</div>
-										<p className="text-muted-foreground text-xs">Persist raw request and response payloads in log records.</p>
+										<p className="text-muted-foreground text-xs">{t("providers.config.debugging.descriptions.storeRawRequestResponse")}</p>
 									</div>
 									<FormControl>
 										<Switch
@@ -205,7 +205,7 @@ export function DebuggingFormFragment({ provider }: DebuggingFormFragmentProps) 
 						disabled={!form.formState.isDirty || !hasUpdateProviderAccess || isUpdatingProvider}
 						isLoading={isUpdatingProvider}
 					>
-						Save Debugging Configuration
+						{t("providers.config.debugging.actions.save")}
 					</Button>
 				</div>
 			</form>

@@ -15,6 +15,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 // ============================================================================
@@ -277,6 +278,7 @@ function AllocationTable({
 	testIdPrefix?: string;
 }) {
 	const SortIcon = sortDirection === "asc" ? ArrowUp : ArrowDown;
+	const { t } = useTranslation();
 
 	const SortHeader = ({ field, children }: { field: AllocationSortField; children: React.ReactNode }) => (
 		<th
@@ -301,11 +303,11 @@ function AllocationTable({
 			<table className="w-full">
 				<thead>
 					<tr className="border-b border-zinc-800">
-						<th scope="col" className="w-8 px-2 py-3" aria-label="Expand" />
-						<SortHeader field="function">Function</SortHeader>
-						<SortHeader field="file">File:Line</SortHeader>
-						<SortHeader field="bytes">Bytes</SortHeader>
-						<SortHeader field="count">Count</SortHeader>
+						<th scope="col" className="w-8 px-2 py-3" aria-label={t("devProfiler.pprof.table.expand")} />
+						<SortHeader field="function">{t("devProfiler.pprof.table.function")}</SortHeader>
+						<SortHeader field="file">{t("devProfiler.pprof.table.fileLine")}</SortHeader>
+						<SortHeader field="bytes">{t("devProfiler.pprof.table.bytes")}</SortHeader>
+						<SortHeader field="count">{t("devProfiler.pprof.table.count")}</SortHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -361,7 +363,7 @@ function AllocationTable({
 									<tr className="border-b border-zinc-800/50 bg-zinc-900/50">
 										<td />
 										<td colSpan={4} className="px-4 py-3">
-											<div className="mb-2 text-xs font-medium text-zinc-500">Stack Trace</div>
+											<div className="mb-2 text-xs font-medium text-zinc-500">{t("devProfiler.pprof.stackTrace")}</div>
 											<div className="space-y-0.5 font-mono text-xs">
 												{alloc.stack.map((line, j) => (
 													<div key={j} className="break-all text-zinc-400">
@@ -378,7 +380,7 @@ function AllocationTable({
 					{allocations.length === 0 && (
 						<tr>
 							<td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
-								No allocations data available
+								{t("devProfiler.pprof.noAllocations")}
 							</td>
 						</tr>
 					)}
@@ -398,32 +400,34 @@ function LeakTable({
 	expandedKeys: Set<string>;
 	onToggle: (key: string) => void;
 }) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full">
 				<thead>
 					<tr className="border-b border-zinc-800">
-						<th scope="col" className="w-8 px-2 py-3" aria-label="Expand" />
+						<th scope="col" className="w-8 px-2 py-3" aria-label={t("devProfiler.pprof.table.expand")} />
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Severity
+							{t("devProfiler.pprof.table.severity")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Function
+							{t("devProfiler.pprof.table.function")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							File:Line
+							{t("devProfiler.pprof.table.fileLine")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Live
+							{t("devProfiler.pprof.table.live")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Retention
+							{t("devProfiler.pprof.table.retention")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Trend
+							{t("devProfiler.pprof.table.trend")}
 						</th>
 						<th scope="col" className="px-4 py-3 text-left text-sm font-medium text-zinc-400">
-							Live Count
+							{t("devProfiler.pprof.table.liveCount")}
 						</th>
 					</tr>
 				</thead>
@@ -452,7 +456,7 @@ function LeakTable({
 									</td>
 									<td className="px-4 py-3">
 										<span className={`rounded border px-2 py-0.5 text-xs uppercase ${getLeakSeverityClasses(c.severity)}`}>
-											{c.severity}
+											{t(`devProfiler.pprof.severity.${c.severity}`)}
 										</span>
 									</td>
 									<td className="px-4 py-3">
@@ -475,7 +479,7 @@ function LeakTable({
 												<TrendingUp className="h-3 w-3" />+{formatBytes(c.growthBytes)}
 											</span>
 										) : (
-											<span className="text-xs text-zinc-500">stable</span>
+											<span className="text-xs text-zinc-500">{t("devProfiler.pprof.stable")}</span>
 										)}
 									</td>
 									<td className="px-4 py-3">
@@ -488,19 +492,19 @@ function LeakTable({
 										<td colSpan={7} className="px-4 py-3">
 											<div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
 												<span>
-													Cumulative: <span className="text-zinc-300">{formatBytes(c.cumulativeBytes)}</span>
+													{t("devProfiler.pprof.cumulative")}: <span className="text-zinc-300">{formatBytes(c.cumulativeBytes)}</span>
 												</span>
 												<span>
-													Retained: <span className="text-zinc-300">{(c.retention * 100).toFixed(1)}%</span>
+													{t("devProfiler.pprof.retained")}: <span className="text-zinc-300">{(c.retention * 100).toFixed(1)}%</span>
 												</span>
 												{c.samples.length >= 2 && (
 													<span>
-														Last {c.samples.length * 10}s:{" "}
+														{t("devProfiler.pprof.lastSeconds", { seconds: c.samples.length * 10 })}:{" "}
 														<span className="text-zinc-300">{c.samples.map((b) => formatBytes(b)).join(" → ")}</span>
 													</span>
 												)}
 											</div>
-											<div className="mb-2 text-xs font-medium text-zinc-500">Stack Trace</div>
+											<div className="mb-2 text-xs font-medium text-zinc-500">{t("devProfiler.pprof.stackTrace")}</div>
 											<div className="space-y-0.5 font-mono text-xs">
 												{c.stack.map((line, j) => (
 													<div key={j} className="break-all text-zinc-400">
@@ -517,7 +521,7 @@ function LeakTable({
 					{candidates.length === 0 && (
 						<tr>
 							<td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
-								No obvious leak signatures — all live allocations have normal retention ratios.
+								{t("devProfiler.pprof.noLeakSignatures")}
 							</td>
 						</tr>
 					)}
@@ -539,6 +543,8 @@ function GoroutineGroupRow({
 	onToggle: () => void;
 	onSkip: (filePath: string) => void;
 }) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="border-b border-zinc-800/50">
 			<div
@@ -566,12 +572,14 @@ function GoroutineGroupRow({
 						<span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">{group.count}x</span>
 						<span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">{group.state}</span>
 						{group.wait_minutes != null && group.wait_minutes > 0 && (
-							<span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">{group.wait_minutes}m waiting</span>
+							<span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
+								{t("devProfiler.waiting", { count: group.wait_minutes })}
+							</span>
 						)}
 					</div>
 					{group.wait_reason && (
 						<div className="mt-1 text-xs text-zinc-500">
-							Wait reason: <span className="text-amber-400">{group.wait_reason}</span>
+							{t("devProfiler.wait")}: <span className="text-amber-400">{group.wait_reason}</span>
 						</div>
 					)}
 				</div>
@@ -585,15 +593,15 @@ function GoroutineGroupRow({
 					}}
 					data-testid="pprof-goroutine-skip"
 					className="shrink-0 rounded p-1.5 text-zinc-600 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-300 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-zinc-500"
-					title="Hide goroutines from this file"
-					aria-label="Hide goroutines from this file"
+					title={t("devProfiler.hideFromFile")}
+					aria-label={t("devProfiler.hideFromFile")}
 				>
 					<EyeOff className="h-4 w-4" />
 				</button>
 			</div>
 			{isExpanded && (
 				<div className="border-t border-zinc-800/50 bg-zinc-900/50 px-4 py-3">
-					<div className="mb-2 text-xs font-medium text-zinc-500">Stack Trace</div>
+					<div className="mb-2 text-xs font-medium text-zinc-500">{t("devProfiler.pprof.stackTrace")}</div>
 					<div className="space-y-0.5 font-mono text-xs">
 						{group.stack.map((line, j) => (
 							<div key={j} className="break-all text-zinc-400">
@@ -612,6 +620,7 @@ function GoroutineGroupRow({
 // ============================================================================
 
 export default function PprofPage() {
+	const { t } = useTranslation();
 	const [expandedGoroutines, setExpandedGoroutines] = useState<Set<string>>(new Set());
 	const [skippedGoroutines, setSkippedGoroutines] = useState<Set<string>>(new Set());
 	const [hasLoadedSkipped, setHasLoadedSkipped] = useState(false);
@@ -825,7 +834,7 @@ export default function PprofPage() {
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="flex items-center gap-3 text-zinc-400">
 					<RefreshCw className="h-5 w-5 animate-spin" />
-					Loading profiling data...
+					{t("devProfiler.pprof.loading")}
 				</div>
 			</div>
 		);
@@ -836,7 +845,7 @@ export default function PprofPage() {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="rounded-lg border border-red-800 bg-red-900/20 px-6 py-4 text-red-400">
-					Failed to load profiling data. Make sure the backend is running in dev mode.
+					{t("devProfiler.pprof.loadErrorDetailed")}
 				</div>
 			</div>
 		);
@@ -847,13 +856,13 @@ export default function PprofPage() {
 			{/* Header */}
 			<div className="mb-8 flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-semibold text-zinc-100">Pprof Profiler</h1>
-					<p className="mt-1 text-sm text-zinc-500">Development only - Runtime profiling and memory analysis</p>
+					<h1 className="text-2xl font-semibold text-zinc-100">{t("devProfiler.pprof.title")}</h1>
+					<p className="mt-1 text-sm text-zinc-500">{t("devProfiler.pprof.subtitle")}</p>
 				</div>
 				<div className="flex items-center gap-4">
 					<span className="flex items-center gap-2 text-sm text-zinc-500">
 						<span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-						Auto-refresh: 10s
+						{t("devProfiler.pprof.autoRefresh", { interval: "10s" })}
 					</span>
 					<button
 						onClick={() => refetch()}
@@ -861,7 +870,7 @@ export default function PprofPage() {
 						className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
 					>
 						<RefreshCw className="h-4 w-4" />
-						Refresh
+						{t("devProfiler.pprof.refresh")}
 					</button>
 				</div>
 			</div>
@@ -870,21 +879,36 @@ export default function PprofPage() {
 				<>
 					{/* Overview Stats */}
 					<div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-						<StatCard label="CPU Usage" value={`${data.cpu.usage_percent.toFixed(1)}%`} color="text-orange-400" icon={Cpu} />
-						<StatCard label="Heap Alloc" value={formatBytes(data.memory.alloc)} color="text-cyan-400" icon={HardDrive} />
-						<StatCard label="Heap In-Use" value={formatBytes(data.memory.heap_inuse)} color="text-blue-400" icon={HardDrive} />
-						<StatCard label="System Memory" value={formatBytes(data.memory.sys)} color="text-purple-400" icon={HardDrive} />
 						<StatCard
-							label="Goroutines"
+							label={t("devProfiler.cpuUsage")}
+							value={`${data.cpu.usage_percent.toFixed(1)}%`}
+							color="text-orange-400"
+							icon={Cpu}
+						/>
+						<StatCard label={t("devProfiler.heapAlloc")} value={formatBytes(data.memory.alloc)} color="text-cyan-400" icon={HardDrive} />
+						<StatCard
+							label={t("devProfiler.heapInUse")}
+							value={formatBytes(data.memory.heap_inuse)}
+							color="text-blue-400"
+							icon={HardDrive}
+						/>
+						<StatCard
+							label={t("devProfiler.pprof.systemMemory")}
+							value={formatBytes(data.memory.sys)}
+							color="text-purple-400"
+							icon={HardDrive}
+						/>
+						<StatCard
+							label={t("devProfiler.goroutines")}
 							value={data.runtime.num_goroutine}
 							subValue={goroutineTrend?.isGrowing ? `↑ ${goroutineTrend.growthPercent.toFixed(0)}%` : undefined}
 							color="text-emerald-400"
 							icon={Activity}
 						/>
 						<StatCard
-							label="GC Pause"
+							label={t("devProfiler.gcPause")}
 							value={formatNs(data.runtime.gc_pause_ns)}
-							subValue={`${data.runtime.num_gc} GCs`}
+							subValue={t("devProfiler.pprof.gcCount", { count: data.runtime.num_gc })}
 							color="text-amber-400"
 							icon={Activity}
 						/>
@@ -896,8 +920,8 @@ export default function PprofPage() {
 						<div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
 							<div className="mb-4 flex items-center gap-2">
 								<Cpu className="h-4 w-4 text-orange-400" />
-								<span className="font-medium text-zinc-300">CPU Usage & Goroutines</span>
-								<span className="text-sm text-zinc-500">(last 5 min)</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.pprof.cpuUsageAndGoroutines")}</span>
+								<span className="text-sm text-zinc-500">{t("devProfiler.pprof.last5Min")}</span>
 							</div>
 							<div className="h-64">
 								<ResponsiveContainer width="100%" height="100%">
@@ -947,7 +971,7 @@ export default function PprofPage() {
 											strokeWidth={2}
 											fill="url(#cpuGradient)"
 											yAxisId="left"
-											name="CPU %"
+											name={t("devProfiler.pprof.cpuPercent")}
 										/>
 										<Area
 											type="monotone"
@@ -956,7 +980,7 @@ export default function PprofPage() {
 											strokeWidth={2}
 											fill="url(#goroutineGradient)"
 											yAxisId="right"
-											name="Goroutines"
+											name={t("devProfiler.goroutines")}
 										/>
 									</AreaChart>
 								</ResponsiveContainer>
@@ -964,11 +988,11 @@ export default function PprofPage() {
 							<div className="mt-3 flex gap-6 text-sm">
 								<span className="flex items-center gap-2">
 									<span className="h-3 w-3 rounded-full bg-orange-500" />
-									CPU %
+									{t("devProfiler.pprof.cpuPercent")}
 								</span>
 								<span className="flex items-center gap-2">
 									<span className="h-3 w-3 rounded-full bg-emerald-400" />
-									Goroutines
+									{t("devProfiler.goroutines")}
 								</span>
 							</div>
 						</div>
@@ -977,8 +1001,8 @@ export default function PprofPage() {
 						<div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
 							<div className="mb-4 flex items-center gap-2">
 								<HardDrive className="h-4 w-4 text-cyan-400" />
-								<span className="font-medium text-zinc-300">Memory Usage</span>
-								<span className="text-sm text-zinc-500">(last 5 min)</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.pprof.memoryUsage")}</span>
+								<span className="text-sm text-zinc-500">{t("devProfiler.pprof.last5Min")}</span>
 							</div>
 							<div className="h-64">
 								<ResponsiveContainer width="100%" height="100%">
@@ -1011,14 +1035,21 @@ export default function PprofPage() {
 											}}
 											labelStyle={{ color: "#a1a1aa" }}
 										/>
-										<Area type="monotone" dataKey="alloc" stroke="#22d3ee" strokeWidth={2} fill="url(#allocGradient)" name="Alloc (MB)" />
+										<Area
+											type="monotone"
+											dataKey="alloc"
+											stroke="#22d3ee"
+											strokeWidth={2}
+											fill="url(#allocGradient)"
+											name={t("devProfiler.pprof.allocMb")}
+										/>
 										<Area
 											type="monotone"
 											dataKey="heapInuse"
 											stroke="#3b82f6"
 											strokeWidth={2}
 											fill="url(#heapGradient)"
-											name="Heap In-Use (MB)"
+											name={t("devProfiler.pprof.heapInUseMb")}
 										/>
 									</AreaChart>
 								</ResponsiveContainer>
@@ -1026,11 +1057,11 @@ export default function PprofPage() {
 							<div className="mt-3 flex gap-6 text-sm">
 								<span className="flex items-center gap-2">
 									<span className="h-3 w-3 rounded-full bg-cyan-400" />
-									Alloc
+									{t("devProfiler.alloc")}
 								</span>
 								<span className="flex items-center gap-2">
 									<span className="h-3 w-3 rounded-full bg-blue-500" />
-									Heap In-Use
+									{t("devProfiler.heapInUse")}
 								</span>
 							</div>
 						</div>
@@ -1041,28 +1072,25 @@ export default function PprofPage() {
 						<div className="border-b border-zinc-800 px-4 py-3">
 							<div className="flex items-center gap-2">
 								<AlertTriangle className="h-4 w-4 text-amber-400" />
-								<span className="font-medium text-zinc-300">Potential Leaks</span>
-								<span className="text-sm text-zinc-500">({leakCandidates.length} suspicious)</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.potentialLeaks")}</span>
+								<span className="text-sm text-zinc-500">{t("devProfiler.pprof.suspiciousCount", { count: leakCandidates.length })}</span>
 								{leakSummary.high > 0 && (
 									<span className="rounded border border-red-400/20 bg-red-400/10 px-2 py-0.5 text-xs text-red-400">
-										{leakSummary.high} high
+										{t("devProfiler.pprof.severityCount", { count: leakSummary.high, severity: t("devProfiler.pprof.severity.high") })}
 									</span>
 								)}
 								{leakSummary.medium > 0 && (
 									<span className="rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-xs text-amber-400">
-										{leakSummary.medium} medium
+										{t("devProfiler.pprof.severityCount", { count: leakSummary.medium, severity: t("devProfiler.pprof.severity.medium") })}
 									</span>
 								)}
 								{leakSummary.low > 0 && (
 									<span className="rounded border border-zinc-400/20 bg-zinc-400/10 px-2 py-0.5 text-xs text-zinc-400">
-										{leakSummary.low} low
+										{t("devProfiler.pprof.severityCount", { count: leakSummary.low, severity: t("devProfiler.pprof.severity.low") })}
 									</span>
 								)}
 							</div>
-							<p className="mt-1 text-xs text-zinc-500">
-								Stacks whose live bytes remain a large fraction of what they ever allocated (retention), optionally with live bytes trending
-								upward over the last minute. Growth + high retention together is the strongest leak signal.
-							</p>
+							<p className="mt-1 text-xs text-zinc-500">{t("devProfiler.pprof.leakDescription")}</p>
 						</div>
 						<LeakTable candidates={leakCandidates} expandedKeys={expandedLeaks} onToggle={toggleLeakExpand} />
 					</div>
@@ -1072,12 +1100,10 @@ export default function PprofPage() {
 						<div className="border-b border-zinc-800 px-4 py-3">
 							<div className="flex items-center gap-2">
 								<HardDrive className="h-4 w-4 text-emerald-400" />
-								<span className="font-medium text-zinc-300">Live Heap Allocations</span>
-								<span className="text-sm text-zinc-500">({sortedInuseAllocations.length} sites)</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.pprof.liveHeapAllocations")}</span>
+								<span className="text-sm text-zinc-500">{t("devProfiler.pprof.sitesCount", { count: sortedInuseAllocations.length })}</span>
 							</div>
-							<p className="mt-1 text-xs text-zinc-500">
-								Call stacks currently holding memory on the heap right now — expand a row to see the full stack.
-							</p>
+							<p className="mt-1 text-xs text-zinc-500">{t("devProfiler.pprof.liveHeapDescription")}</p>
 						</div>
 						<AllocationTable
 							allocations={sortedInuseAllocations}
@@ -1096,12 +1122,10 @@ export default function PprofPage() {
 						<div className="border-b border-zinc-800 px-4 py-3">
 							<div className="flex items-center gap-2">
 								<HardDrive className="h-4 w-4 text-rose-400" />
-								<span className="font-medium text-zinc-300">Cumulative Memory Allocations</span>
-								<span className="text-sm text-zinc-500">({sortedAllocations.length} sites)</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.pprof.cumulativeMemoryAllocations")}</span>
+								<span className="text-sm text-zinc-500">{t("devProfiler.pprof.sitesCount", { count: sortedAllocations.length })}</span>
 							</div>
-							<p className="mt-1 text-xs text-zinc-500">
-								Total bytes allocated since process start (includes memory already freed) — expand a row to see the full stack.
-							</p>
+							<p className="mt-1 text-xs text-zinc-500">{t("devProfiler.pprof.cumulativeMemoryDescription")}</p>
 						</div>
 						<AllocationTable
 							allocations={sortedAllocations}
@@ -1118,27 +1142,27 @@ export default function PprofPage() {
 						<div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
 							<div className="flex items-center gap-2">
 								<Activity className="h-4 w-4 text-emerald-400" />
-								<span className="font-medium text-zinc-300">Goroutine Health</span>
+								<span className="font-medium text-zinc-300">{t("devProfiler.goroutineHealth")}</span>
 								{goroutineTrend?.isGrowing && (
 									<span className="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
 										<TrendingUp className="h-3 w-3" />
-										Growing +{goroutineTrend.growthPercent.toFixed(0)}%
+										{t("devProfiler.pprof.growingPercent", { percent: goroutineTrend.growthPercent.toFixed(0) })}
 									</span>
 								)}
 								{goroutineHealth === "critical" && (
 									<span className="flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-400">
 										<AlertTriangle className="h-3 w-3" />
-										Stuck Goroutines
+										{t("devProfiler.pprof.stuckGoroutines")}
 									</span>
 								)}
 								{goroutineHealth === "warning" && (
 									<span className="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">
 										<AlertTriangle className="h-3 w-3" />
-										Long Waiting
+										{t("common.status.longWait")}
 									</span>
 								)}
 								{goroutineHealth === "healthy" && (
-									<span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">Healthy</span>
+									<span className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">{t("common.status.healthy")}</span>
 								)}
 							</div>
 							{skippedGoroutines.size > 0 && (
@@ -1148,7 +1172,7 @@ export default function PprofPage() {
 									className="flex items-center gap-1 rounded px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
 								>
 									<RotateCcw className="h-3 w-3" />
-									Clear {skippedGoroutines.size} hidden
+									{t("devProfiler.pprof.clearHiddenCount", { count: skippedGoroutines.size })}
 								</button>
 							)}
 						</div>
@@ -1158,15 +1182,15 @@ export default function PprofPage() {
 							<div className="grid grid-cols-4 gap-4 border-b border-zinc-800 p-4">
 								<div className="text-center">
 									<div className="text-2xl font-semibold text-emerald-400">{goroutineData.total_goroutines}</div>
-									<div className="text-sm text-zinc-500">Total</div>
+									<div className="text-sm text-zinc-500">{t("devProfiler.total")}</div>
 								</div>
 								<div className="text-center">
 									<div className="text-2xl font-semibold text-blue-400">{goroutineData.summary.background}</div>
-									<div className="text-sm text-zinc-500">Background</div>
+									<div className="text-sm text-zinc-500">{t("devProfiler.background")}</div>
 								</div>
 								<div className="text-center">
 									<div className="text-2xl font-semibold text-amber-400">{goroutineData.summary.per_request}</div>
-									<div className="text-sm text-zinc-500">Per-Request</div>
+									<div className="text-sm text-zinc-500">{t("devProfiler.perRequest")}</div>
 								</div>
 								<div className="text-center">
 									<div
@@ -1174,7 +1198,7 @@ export default function PprofPage() {
 									>
 										{goroutineData.summary.potentially_stuck}
 									</div>
-									<div className="text-sm text-zinc-500">Stuck</div>
+									<div className="text-sm text-zinc-500">{t("devProfiler.stuck")}</div>
 								</div>
 							</div>
 						)}
@@ -1195,9 +1219,7 @@ export default function PprofPage() {
 							})}
 							{filteredGoroutines.length === 0 && (
 								<div className="px-4 py-8 text-center text-zinc-500">
-									{skippedGoroutines.size > 0
-										? 'All goroutines are hidden. Click "Clear hidden" to show them.'
-										: "No goroutine data available"}
+									{skippedGoroutines.size > 0 ? t("devProfiler.pprof.allGoroutinesHidden") : t("devProfiler.pprof.noGoroutineData")}
 								</div>
 							)}
 						</div>
@@ -1207,19 +1229,19 @@ export default function PprofPage() {
 					<div className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-3">
 						<div className="flex flex-wrap items-center gap-6 text-sm text-zinc-400">
 							<span>
-								<span className="text-zinc-500">CPUs:</span> {data.runtime.num_cpu}
+								<span className="text-zinc-500">{t("devProfiler.cpus")}:</span> {data.runtime.num_cpu}
 							</span>
 							<span>
-								<span className="text-zinc-500">GOMAXPROCS:</span> {data.runtime.gomaxprocs}
+								<span className="text-zinc-500">{t("devProfiler.pprof.gomaxprocs")}:</span> {data.runtime.gomaxprocs}
 							</span>
 							<span>
-								<span className="text-zinc-500">GC Runs:</span> {data.runtime.num_gc}
+								<span className="text-zinc-500">{t("devProfiler.pprof.gcRuns")}:</span> {data.runtime.num_gc}
 							</span>
 							<span>
-								<span className="text-zinc-500">Heap Objects:</span> {data.memory.heap_objects.toLocaleString()}
+								<span className="text-zinc-500">{t("devProfiler.pprof.heapObjects")}:</span> {data.memory.heap_objects.toLocaleString()}
 							</span>
 							<span>
-								<span className="text-zinc-500">Total Alloc:</span> {formatBytes(data.memory.total_alloc)}
+								<span className="text-zinc-500">{t("devProfiler.pprof.totalAlloc")}:</span> {formatBytes(data.memory.total_alloc)}
 							</span>
 						</div>
 					</div>

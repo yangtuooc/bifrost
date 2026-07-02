@@ -29,8 +29,10 @@ import { AlertCircle, BarChart, CheckCircle, Clock, DollarSign, Hash, Info } fro
 import { parseAsSafeArrayOf, parseAsSafeString } from "@/lib/queryParamsParser";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function LogsPage() {
+	const { t } = useTranslation();
 	const [error, setError] = useState<string | null>(null);
 	const [showEmptyState, setShowEmptyState] = useState(false);
 	const hasCheckedEmptyState = useRef(false);
@@ -400,19 +402,21 @@ export default function LogsPage() {
 	const statCards = useMemo(
 		() => [
 			{
-				title: "Total Requests",
+				id: "total-requests",
+				title: t("logs.statusCards.totalRequests"),
 				value: <NumberFlow value={stats?.total_requests ?? 0} format={COMPACT_NUMBER_FORMAT} />,
 				icon: <BarChart className="size-4" />,
 			},
 			{
-				title: "Success Rate",
+				id: "success-rate",
+				title: t("logs.statusCards.successRate"),
 				value: <NumberFlow value={stats?.success_rate ?? 0} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} suffix="%" />,
 				icon: <CheckCircle className="size-4" />,
-				description:
-					"Success rate as perceived by the system. Each fallback counts as a separate attempt. Retries on the same request are counted as one attempt.",
+				description: t("logs.statusCards.successRateDescription"),
 			},
 			{
-				title: "User Success Rate",
+				id: "user-success-rate",
+				title: t("logs.statusCards.userSuccessRate"),
 				value: (
 					<NumberFlow
 						value={stats?.user_facing_success_rate ?? 0}
@@ -421,22 +425,25 @@ export default function LogsPage() {
 					/>
 				),
 				icon: <CheckCircle className="size-4" />,
-				description: "Success rate as perceived by the end user. It includes fallback chains as one request.",
+				description: t("logs.statusCards.userSuccessRateDescription"),
 			},
 			{
-				title: "Avg Latency",
+				id: "avg-latency",
+				title: t("logs.statusCards.avgLatency"),
 				value: (
 					<NumberFlow value={stats?.average_latency ?? 0} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} suffix="ms" />
 				),
 				icon: <Clock className="size-4" />,
 			},
 			{
-				title: "Total Tokens",
+				id: "total-tokens",
+				title: t("logs.statusCards.totalTokens"),
 				value: <NumberFlow value={stats?.total_tokens ?? 0} format={COMPACT_NUMBER_FORMAT} />,
 				icon: <Hash className="size-4" />,
 			},
 			{
-				title: "Total Cost",
+				id: "total-cost",
+				title: t("logs.statusCards.totalCost"),
 				value: (
 					<NumberFlow
 						value={stats?.total_cost ?? 0}
@@ -450,7 +457,7 @@ export default function LogsPage() {
 				icon: <DollarSign className="size-4" />,
 			},
 		],
-		[stats],
+		[stats, t],
 	);
 
 	// Only need metadata_keys here (used to render dynamic columns even when the
@@ -463,7 +470,10 @@ export default function LogsPage() {
 		return Object.keys(filterData.metadata_keys).sort();
 	}, [filterData?.metadata_keys]);
 
-	const columns = useMemo(() => createColumns(handleDelete, hasDeleteAccess, metadataKeys), [handleDelete, hasDeleteAccess, metadataKeys]);
+	const columns = useMemo(
+		() => createColumns(handleDelete, t, hasDeleteAccess, metadataKeys),
+		[handleDelete, t, hasDeleteAccess, metadataKeys],
+	);
 
 	const columnIds = useMemo(
 		() => columns.map((col) => ("id" in col && col.id ? col.id : "accessorKey" in col ? String(col.accessorKey) : "")).filter(Boolean),
@@ -472,22 +482,22 @@ export default function LogsPage() {
 
 	const COLUMN_LABELS: Record<string, string> = useMemo(
 		() => ({
-			timestamp: "Time",
-			request_type: "Type",
-			input: "Message",
-			provider: "Provider",
-			model: "Model",
-			latency: "Latency",
-			tokens: "Tokens",
-			cost: "Cost",
-			virtual_key: "Virtual Key",
-			routing_rule: "Routing Rule",
-			team: "Team",
-			customer: "Customer",
-			user: "User",
-			business_unit: "Business Unit",
+			timestamp: t("logs.table.time"),
+			request_type: t("logs.table.type"),
+			input: t("logs.table.message"),
+			provider: t("logs.table.provider"),
+			model: t("logs.table.model"),
+			latency: t("logs.table.latency"),
+			tokens: t("logs.table.tokens"),
+			cost: t("logs.table.cost"),
+			virtual_key: t("logs.table.virtualKey"),
+			routing_rule: t("logs.table.routingRule"),
+			team: t("logs.table.team"),
+			customer: t("logs.table.customer"),
+			user: t("logs.table.user"),
+			business_unit: t("logs.table.businessUnit"),
 		}),
-		[],
+		[t],
 	);
 
 	const DEFAULT_HIDDEN_COLUMNS = useMemo(() => ["virtual_key", "routing_rule", "team", "customer", "user", "business_unit"], []);
@@ -635,7 +645,7 @@ export default function LogsPage() {
 						</div>
 						<div className="grid shrink-0 grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
 							{statCards.map((card) => (
-								<Card key={card.title} className="py-4 shadow-none">
+								<Card key={card.id} className="py-4 shadow-none">
 									<CardContent
 										className={`flex items-center justify-between px-4 transition-opacity duration-200 ${statsIsFetching ? "opacity-50" : "opacity-100"}`}
 									>
@@ -647,8 +657,8 @@ export default function LogsPage() {
 														<TooltipTrigger asChild>
 															<button
 																type="button"
-																aria-label={`${card.title} info`}
-																data-testid={`logs-metric-info-${card.title.toLowerCase().replace(/\s+/g, "-")}`}
+																aria-label={t("logs.statusCards.infoAria", { title: card.title })}
+																data-testid={`logs-metric-info-${card.id}`}
 																className="inline-flex items-center"
 															>
 																<Info className="size-3 cursor-help" />

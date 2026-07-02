@@ -9,9 +9,10 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alertDialog";
 import type { MCPLibraryEntry } from "@/lib/types/mcp";
+import { useTranslation } from "react-i18next";
 
 interface MCPLibraryDeleteDialogProps {
-	/** The entry being removed; when null the dialog is closed. */
+	/** 正在移除的条目；为 null 时弹窗关闭。 */
 	server: MCPLibraryEntry | null;
 	open: boolean;
 	isDeleting: boolean;
@@ -20,26 +21,23 @@ interface MCPLibraryDeleteDialogProps {
 	confirmTestId: string;
 }
 
-// Shared confirmation dialog for soft-deleting a library entry, used by both the
-// card and table views. Copy is sync-aware: custom entries simply disappear,
-// while remote entries are tombstoned so they don't reappear on the next sync.
+// Library 条目的软删除确认弹窗，同时用于 card 和 table 视图。
 export function MCPLibraryDeleteDialog({ server, open, isDeleting, onOpenChange, onConfirm, confirmTestId }: MCPLibraryDeleteDialogProps) {
+	const { t } = useTranslation();
 	const isCustom = server?.source === "custom";
 
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Remove "{server?.name}" from library?</AlertDialogTitle>
+					<AlertDialogTitle>{t("mcpRegistry.library.deleteDialog.title", { name: server?.name })}</AlertDialogTitle>
 					<AlertDialogDescription>
-						{isCustom
-							? "This custom server will no longer be available for members to install."
-							: "This server will be hidden from the library and will not reappear on the next catalog sync."}{" "}
-						Existing installations are not affected.
+						{isCustom ? t("mcpRegistry.library.deleteDialog.customDescription") : t("mcpRegistry.library.deleteDialog.remoteDescription")}{" "}
+						{t("mcpRegistry.library.deleteDialog.existingInstallations")}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+					<AlertDialogCancel disabled={isDeleting}>{t("common.actions.cancel")}</AlertDialogCancel>
 					<AlertDialogAction
 						onClick={(event) => {
 							event.preventDefault();
@@ -48,7 +46,7 @@ export function MCPLibraryDeleteDialog({ server, open, isDeleting, onOpenChange,
 						disabled={isDeleting}
 						data-testid={confirmTestId}
 					>
-						{isDeleting ? "Removing..." : "Remove"}
+						{isDeleting ? t("mcpRegistry.library.deleteDialog.removing") : t("mcpRegistry.library.deleteDialog.remove")}
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

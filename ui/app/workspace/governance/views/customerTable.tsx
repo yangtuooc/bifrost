@@ -26,13 +26,28 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, ScrollText, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CustomersEmptyState } from "./customersEmptyState";
 import CustomerSheet from "./customerSheet";
 
-// Helper to format reset duration for display
-const formatResetDuration = (duration: string) => {
-	return resetDurationLabels[duration] || duration;
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+const resetDurationLabelKeys: Record<string, string> = {
+	"1m": "common.resetDurations.everyMinute",
+	"5m": "common.resetDurations.everyFiveMinutes",
+	"15m": "common.resetDurations.everyFifteenMinutes",
+	"30m": "common.resetDurations.everyThirtyMinutes",
+	"1h": "common.resetDurations.hourly",
+	"6h": "common.resetDurations.everySixHours",
+	"1d": "common.resetDurations.daily",
+	"1w": "common.resetDurations.weekly",
+	"1M": "common.resetDurations.monthly",
+};
+
+const formatResetDuration = (duration: string, t: Translate) => {
+	const key = resetDurationLabelKeys[duration];
+	return key ? t(key) : resetDurationLabels[duration] || duration;
 };
 
 const ACTIONS_COLUMN_CLASS = `sticky right-0 z-10 w-[56px] min-w-[56px] text-right ${PIN_SHADOW_RIGHT}`;
@@ -46,6 +61,7 @@ interface CustomerActionsMenuProps {
 }
 
 function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete }: CustomerActionsMenuProps) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
@@ -55,7 +71,7 @@ function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete 
 					variant="ghost"
 					size="icon"
 					className="h-8 w-8"
-					aria-label={`Customer actions ${customer.name}`}
+					aria-label={t("governance.customers.actions.actionsFor", { name: customer.name })}
 					data-testid={`customer-actions-btn-${customer.id}`}
 					onClick={(e) => e.stopPropagation()}
 					onPointerDown={(e) => e.stopPropagation()}
@@ -77,7 +93,7 @@ function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete 
 					onPointerDown={(e) => e.stopPropagation()}
 				>
 					<Edit className="h-4 w-4" />
-					Edit
+					{t("common.actions.edit")}
 				</DropdownMenuItem>
 				<DropdownMenuItem asChild className="cursor-pointer" data-testid={`customer-button-view-logs-${customer.id}`}>
 					<Link
@@ -90,7 +106,7 @@ function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete 
 						onPointerDown={(e) => e.stopPropagation()}
 					>
 						<ScrollText className="h-4 w-4" />
-						View logs
+						{t("governance.common.actions.viewLogs")}
 					</Link>
 				</DropdownMenuItem>
 				<DropdownMenuItem
@@ -106,7 +122,7 @@ function CustomerActionsMenu({ customer, canUpdate, canDelete, onEdit, onDelete 
 					onPointerDown={(e) => e.stopPropagation()}
 				>
 					<Trash2 className="h-4 w-4" />
-					Delete
+					{t("common.actions.delete")}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
@@ -140,6 +156,7 @@ export default function CustomersTable({
 	onOffsetChange,
 	isFetching,
 }: CustomersTableProps) {
+	const { t } = useTranslation();
 	const [showCustomerSheet, setShowCustomerSheet] = useState(false);
 	const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 	const [confirmDeleteCustomer, setConfirmDeleteCustomer] = useState<Customer | null>(null);
@@ -154,7 +171,7 @@ export default function CustomersTable({
 	const handleDelete = async (customerId: string) => {
 		try {
 			await deleteCustomer(customerId).unwrap();
-			toast.success("Customer deleted successfully");
+			toast.success(t("governance.customers.toasts.deleted"));
 		} catch (error) {
 			toast.error(getErrorMessage(error));
 		} finally {
@@ -187,7 +204,7 @@ export default function CustomersTable({
 
 	const hasActiveFilters = debouncedSearch;
 
-	// True empty state: no customers at all (not just filtered to zero)
+	// 真实空状态：完全没有 customers，而不是筛选后为空。
 	if (totalCount === 0 && !hasActiveFilters && !isFetching) {
 		return (
 			<>
@@ -231,12 +248,12 @@ export default function CustomersTable({
 				<div className="flex grow flex-col">
 					<div className="mb-4 flex items-center justify-between">
 						<div>
-							<h2 className="text-lg font-semibold">Customers</h2>
-							<p className="text-muted-foreground text-sm">Manage customer accounts with their own teams, budgets, and access controls.</p>
+							<h2 className="text-lg font-semibold">{t("governance.customers.title")}</h2>
+							<p className="text-muted-foreground text-sm">{t("governance.customers.description")}</p>
 						</div>
 						<Button data-testid="customer-button-create" onClick={handleAddCustomer} disabled={!hasCreateAccess}>
 							<Plus className="h-4 w-4" />
-							Add Customer
+							{t("governance.customers.actions.add")}
 						</Button>
 					</div>
 
@@ -244,8 +261,8 @@ export default function CustomersTable({
 						<div className="relative max-w-sm flex-1">
 							<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 							<Input
-								aria-label="Search customers by name"
-								placeholder="Search by name..."
+								aria-label={t("governance.customers.search.aria")}
+								placeholder={t("governance.common.searchPlaceholder")}
 								value={search}
 								onChange={(e) => onSearchChange(e.target.value)}
 								className="pl-9"
@@ -258,11 +275,11 @@ export default function CustomersTable({
 						<Table className="min-w-[1100px]">
 							<TableHeader>
 								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>Teams</TableHead>
-									<TableHead>Budget</TableHead>
-									<TableHead>Rate Limit</TableHead>
-									<TableHead>Virtual Keys</TableHead>
+									<TableHead>{t("common.table.name")}</TableHead>
+									<TableHead>{t("governance.common.table.teams")}</TableHead>
+									<TableHead>{t("governance.common.table.budget")}</TableHead>
+									<TableHead>{t("governance.common.table.rateLimit")}</TableHead>
+									<TableHead>{t("governance.common.table.virtualKeys")}</TableHead>
 									<TableHead className={`bg-muted ${ACTIONS_COLUMN_CLASS}`}></TableHead>
 								</TableRow>
 							</TableHeader>
@@ -270,7 +287,7 @@ export default function CustomersTable({
 								{customers.length === 0 ? (
 									<TableRow>
 										<TableCell colSpan={6} className="h-24 text-center">
-											<span className="text-muted-foreground text-sm">No matching customers found.</span>
+											<span className="text-muted-foreground text-sm">{t("governance.customers.empty.noMatching")}</span>
 										</TableCell>
 									</TableRow>
 								) : (
@@ -278,11 +295,11 @@ export default function CustomersTable({
 										const customerTeams = getTeamsForCustomer(customer.id);
 										const vks = getVirtualKeysForCustomer(customer.id);
 
-										// Budget calculations (most-exhausted budget drives the row highlight)
+										// 任意 customer 预算耗尽都会触发行高亮。
 										const budgets = customer.budgets ?? [];
 										const isBudgetExhausted = budgets.some((b) => b.max_limit > 0 && b.current_usage >= b.max_limit);
 
-										// Rate limit calculations
+										// 速率限制进度用于展示 token 和 request 的当前用量。
 										const isTokenLimitExhausted =
 											customer.rate_limit?.token_max_limit &&
 											customer.rate_limit.token_max_limit > 0 &&
@@ -327,7 +344,7 @@ export default function CustomersTable({
 														<span className="truncate font-medium">{customer.name}</span>
 														{isExhausted && (
 															<Badge variant="destructive" className="w-fit text-xs">
-																Limit Reached
+																{t("governance.common.limitReached")}
 															</Badge>
 														)}
 													</div>
@@ -338,7 +355,9 @@ export default function CustomersTable({
 															<Tooltip>
 																<TooltipTrigger>
 																	<Badge variant="outline" className="text-xs">
-																		{customerTeams.length} {customerTeams.length === 1 ? "team" : "teams"}
+																		{t(customerTeams.length === 1 ? "governance.units.team" : "governance.units.teams", {
+																			count: customerTeams.length,
+																		})}
 																	</Badge>
 																</TooltipTrigger>
 																<TooltipContent>{customerTeams.map((team) => team.name).join(", ")}</TooltipContent>
@@ -361,7 +380,7 @@ export default function CustomersTable({
 																				<div className="flex items-center justify-between gap-4">
 																					<span className="text-sm font-medium">{formatCurrency(budget.max_limit)}</span>
 																					<span className="text-muted-foreground text-xs">
-																						{formatResetDuration(budget.reset_duration)}
+																						{formatResetDuration(budget.reset_duration, t)}
 																					</span>
 																				</div>
 																				<Progress
@@ -382,7 +401,7 @@ export default function CustomersTable({
 																				{formatCurrency(budget.current_usage)} / {formatCurrency(budget.max_limit)}
 																			</p>
 																			<p className="text-primary-foreground/80 text-xs">
-																				Resets {formatResetDuration(budget.reset_duration)}
+																				{t("governance.common.resets", { duration: formatResetDuration(budget.reset_duration, t) })}
 																			</p>
 																		</TooltipContent>
 																	</Tooltip>
@@ -401,9 +420,11 @@ export default function CustomersTable({
 																	<TooltipTrigger asChild>
 																		<div className="space-y-1.5">
 																			<div className="flex items-center justify-between gap-4 text-xs">
-																				<span className="font-medium">{customer.rate_limit.token_max_limit.toLocaleString()} tokens</span>
+																				<span className="font-medium">
+																					{customer.rate_limit.token_max_limit.toLocaleString()} {t("governance.units.tokens")}
+																				</span>
 																				<span className="text-muted-foreground">
-																					{formatResetDuration(customer.rate_limit.token_reset_duration || "1h")}
+																					{formatResetDuration(customer.rate_limit.token_reset_duration || "1h", t)}
 																				</span>
 																			</div>
 																			<Progress
@@ -422,10 +443,12 @@ export default function CustomersTable({
 																	<TooltipContent>
 																		<p className="font-medium">
 																			{customer.rate_limit.token_current_usage.toLocaleString()} /{" "}
-																			{customer.rate_limit.token_max_limit.toLocaleString()} tokens
+																			{customer.rate_limit.token_max_limit.toLocaleString()} {t("governance.units.tokens")}
 																		</p>
 																		<p className="text-primary-foreground/80 text-xs">
-																			Resets {formatResetDuration(customer.rate_limit.token_reset_duration || "1h")}
+																			{t("governance.common.resets", {
+																				duration: formatResetDuration(customer.rate_limit.token_reset_duration || "1h", t),
+																			})}
 																		</p>
 																	</TooltipContent>
 																</Tooltip>
@@ -435,9 +458,11 @@ export default function CustomersTable({
 																	<TooltipTrigger asChild>
 																		<div className="space-y-1.5">
 																			<div className="flex items-center justify-between gap-4 text-xs">
-																				<span className="font-medium">{customer.rate_limit.request_max_limit.toLocaleString()} req</span>
+																				<span className="font-medium">
+																					{customer.rate_limit.request_max_limit.toLocaleString()} {t("governance.units.requestsShort")}
+																				</span>
 																				<span className="text-muted-foreground">
-																					{formatResetDuration(customer.rate_limit.request_reset_duration || "1h")}
+																					{formatResetDuration(customer.rate_limit.request_reset_duration || "1h", t)}
 																				</span>
 																			</div>
 																			<Progress
@@ -456,10 +481,12 @@ export default function CustomersTable({
 																	<TooltipContent>
 																		<p className="font-medium">
 																			{customer.rate_limit.request_current_usage.toLocaleString()} /{" "}
-																			{customer.rate_limit.request_max_limit.toLocaleString()} requests
+																			{customer.rate_limit.request_max_limit.toLocaleString()} {t("governance.units.requests")}
 																		</p>
 																		<p className="text-primary-foreground/80 text-xs">
-																			Resets {formatResetDuration(customer.rate_limit.request_reset_duration || "1h")}
+																			{t("governance.common.resets", {
+																				duration: formatResetDuration(customer.rate_limit.request_reset_duration || "1h", t),
+																			})}
 																		</p>
 																	</TooltipContent>
 																</Tooltip>
@@ -475,7 +502,7 @@ export default function CustomersTable({
 															<Tooltip>
 																<TooltipTrigger>
 																	<Badge variant="outline" className="text-xs">
-																		{vks.length} {vks.length === 1 ? "key" : "keys"}
+																		{t(vks.length === 1 ? "governance.units.key" : "governance.units.keys", { count: vks.length })}
 																	</Badge>
 																</TooltipTrigger>
 																<TooltipContent>{vks.map((vk) => vk.name).join(", ")}</TooltipContent>
@@ -508,12 +535,15 @@ export default function CustomersTable({
 						</Table>
 					</div>
 
-					{/* Pagination */}
+					{/* 分页 */}
 					{totalCount > 0 && (
 						<div className="flex shrink-0 items-center justify-between text-xs" data-testid="pagination">
 							<div className="text-muted-foreground flex items-center gap-2">
-								{(offset + 1).toLocaleString()}-{Math.min(offset + limit, totalCount).toLocaleString()} of {totalCount.toLocaleString()}{" "}
-								entries
+								{t("common.pagination.entriesRange", {
+									start: (offset + 1).toLocaleString(),
+									end: Math.min(offset + limit, totalCount).toLocaleString(),
+									total: totalCount.toLocaleString(),
+								})}
 							</div>
 
 							<div className="flex items-center gap-2">
@@ -523,15 +553,15 @@ export default function CustomersTable({
 									onClick={() => onOffsetChange(Math.max(0, offset - limit))}
 									disabled={offset === 0}
 									data-testid="customers-pagination-prev-btn"
-									aria-label="Previous page"
+									aria-label={t("common.pagination.previousPage")}
 								>
 									<ChevronLeft className="size-3" />
 								</Button>
 
 								<div className="flex items-center gap-1">
-									<span>Page</span>
+									<span>{t("common.pagination.page")}</span>
 									<span>{Math.floor(offset / limit) + 1}</span>
-									<span>of {Math.ceil(totalCount / limit)}</span>
+									<span>{t("common.pagination.of", { total: Math.ceil(totalCount / limit) })}</span>
 								</div>
 
 								<Button
@@ -540,7 +570,7 @@ export default function CustomersTable({
 									onClick={() => onOffsetChange(offset + limit)}
 									disabled={offset + limit >= totalCount}
 									data-testid="customers-pagination-next-btn"
-									aria-label="Next page"
+									aria-label={t("common.pagination.nextPage")}
 								>
 									<ChevronRight className="size-3" />
 								</Button>
@@ -552,21 +582,20 @@ export default function CustomersTable({
 				<AlertDialog open={!!confirmDeleteCustomer} onOpenChange={(open) => !open && setConfirmDeleteCustomer(null)}>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Delete Customer</AlertDialogTitle>
+							<AlertDialogTitle>{t("governance.customers.deleteDialog.title")}</AlertDialogTitle>
 							<AlertDialogDescription>
-								Are you sure you want to delete &quot;{confirmDeleteCustomer?.name}&quot;? This will also delete all associated teams and
-								unassign any virtual keys. This action cannot be undone.
+								{t("governance.customers.deleteDialog.description", { name: confirmDeleteCustomer?.name })}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel data-testid="customer-button-delete-cancel">Cancel</AlertDialogCancel>
+							<AlertDialogCancel data-testid="customer-button-delete-cancel">{t("common.actions.cancel")}</AlertDialogCancel>
 							<AlertDialogAction
 								data-testid="customer-button-delete-confirm"
 								onClick={() => confirmDeleteCustomer && handleDelete(confirmDeleteCustomer.id)}
 								disabled={isDeleting}
 								className="bg-red-600 hover:bg-red-700"
 							>
-								{isDeleting ? "Deleting..." : "Delete"}
+								{isDeleting ? t("common.actions.deleting") : t("common.actions.delete")}
 							</AlertDialogAction>
 						</AlertDialogFooter>
 					</AlertDialogContent>

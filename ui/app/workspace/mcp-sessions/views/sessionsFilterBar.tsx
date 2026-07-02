@@ -12,29 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ComboboxSelect } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Fingerprint, KeyRound, Search, UserRound, X } from "lucide-react";
-
-// Labels mirror the Type column's TypeBadge ("OAuth" / "Headers") so the
-// filter vocabulary matches what the user sees in the table.
-const KIND_OPTIONS = [
-	{ label: "OAuth", value: "token" },
-	{ label: "Headers", value: "header" },
-];
-
-const STATUS_OPTIONS = [
-	{ label: "Active", value: "active" },
-	{ label: "Orphaned", value: "orphaned" },
-	{ label: "Needs re-auth", value: "needs_reauth" },
-	{ label: "Needs update", value: "needs_update" },
-	{ label: "Pending", value: "pending" },
-];
-
-// Identity-mode icons match the glyphs used in BindingCell so the dropdown
-// reads as the same vocabulary as the rendered table column.
-const AUTH_MODE_OPTIONS = [
-	{ label: "User", value: "user", icon: <UserRound className="size-3.5" /> },
-	{ label: "Virtual key", value: "vk", icon: <KeyRound className="size-3.5" /> },
-	{ label: "Session", value: "session", icon: <Fingerprint className="size-3.5" /> },
-];
+import { useTranslation } from "react-i18next";
 
 export interface SessionsFilterBarProps {
 	search: string;
@@ -50,13 +28,31 @@ export interface SessionsFilterBarProps {
 }
 
 export default function SessionsFilterBar(props: SessionsFilterBarProps) {
+	const { t } = useTranslation();
+	const kindOptions = [
+		{ label: t("mcpSessions.types.oauth"), value: "token" },
+		{ label: t("mcpSessions.types.headers"), value: "header" },
+	];
+	const statusOptions = [
+		{ label: t("mcpSessions.status.active"), value: "active" },
+		{ label: t("mcpSessions.status.orphaned"), value: "orphaned" },
+		{ label: t("mcpSessions.status.needsReauth"), value: "needs_reauth" },
+		{ label: t("mcpSessions.status.needsUpdate"), value: "needs_update" },
+		{ label: t("mcpSessions.status.pending"), value: "pending" },
+	];
+	const authModeOptions = [
+		{ label: t("mcpSessions.filters.authModes.user"), value: "user", icon: <UserRound className="size-3.5" /> },
+		{ label: t("mcpSessions.filters.authModes.virtualKey"), value: "vk", icon: <KeyRound className="size-3.5" /> },
+		{ label: t("mcpSessions.filters.authModes.session"), value: "session", icon: <Fingerprint className="size-3.5" /> },
+	];
+
 	return (
 		<div className="flex shrink-0 flex-wrap items-center gap-3">
 			<div className="relative max-w-sm min-w-[200px] flex-1">
 				<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 				<Input
-					aria-label="Search sessions"
-					placeholder="Search MCP, user, VK, session..."
+					aria-label={t("mcpSessions.filters.searchAria")}
+					placeholder={t("mcpSessions.filters.searchPlaceholder")}
 					value={props.search}
 					onChange={(e) => props.onSearchChange(e.target.value)}
 					className="pl-9"
@@ -68,10 +64,10 @@ export default function SessionsFilterBar(props: SessionsFilterBarProps) {
 				disableSearch
 				compactTrigger
 				data-testid="mcp-sessions-kind-filter"
-				options={KIND_OPTIONS}
+				options={kindOptions}
 				value={props.kindFilter}
 				onValueChange={props.onKindFilterChange}
-				placeholder="All types"
+				placeholder={t("mcpSessions.filters.allTypes")}
 				className="h-9 w-[180px]"
 			/>
 			<ComboboxSelect
@@ -79,10 +75,10 @@ export default function SessionsFilterBar(props: SessionsFilterBarProps) {
 				disableSearch
 				compactTrigger
 				data-testid="mcp-sessions-status-filter"
-				options={STATUS_OPTIONS}
+				options={statusOptions}
 				value={props.statusFilter}
 				onValueChange={props.onStatusFilterChange}
-				placeholder="All statuses"
+				placeholder={t("mcpSessions.filters.allStatuses")}
 				className="h-9 w-[180px]"
 			/>
 			<ComboboxSelect
@@ -90,16 +86,16 @@ export default function SessionsFilterBar(props: SessionsFilterBarProps) {
 				disableSearch
 				compactTrigger
 				data-testid="mcp-sessions-auth-mode-filter"
-				options={AUTH_MODE_OPTIONS}
+				options={authModeOptions}
 				value={props.authModeFilter}
 				onValueChange={props.onAuthModeFilterChange}
-				placeholder="All identities"
+				placeholder={t("mcpSessions.filters.allIdentities")}
 				className="h-9 w-[180px]"
 			/>
 			{props.hasActiveFilters && (
 				<Button variant="ghost" size="sm" onClick={props.onClearFilters} data-testid="mcp-sessions-clear-filters-btn" className="h-9">
 					<X className="h-4 w-4" />
-					Clear filters
+					{t("mcpSessions.filters.clearFilters")}
 				</Button>
 			)}
 		</div>

@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { buildVSCodeConfig, buildVSCodeDeeplink } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { HarnessInstallProps, VSCodeConfigScope } from "../types";
@@ -13,6 +14,7 @@ export function VSCodeHarnessInstall({
 	serverScope,
 	virtualKey,
 }: HarnessInstallProps) {
+	const { t } = useTranslation();
 	const [configScope, setConfigScope] = useState<VSCodeConfigScope>("workspace");
 
 	const serverArgs = useMemo(
@@ -51,18 +53,22 @@ export function VSCodeHarnessInstall({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="workspace">Workspace</SelectItem>
-						<SelectItem value="user">User</SelectItem>
+						<SelectItem value="workspace">{t("mcpRegistry.usageGuide.scopes.workspace")}</SelectItem>
+						<SelectItem value="user">{t("mcpRegistry.usageGuide.scopes.user")}</SelectItem>
 					</SelectContent>
 				</Select>
 			}
-			copySuccessMessage="Config copied"
+			copySuccessMessage={t("mcpRegistry.usageGuide.command.configCopied")}
 			deeplink={deeplink}
-			emptyMessage={virtualKey ? "Select servers or use Gateway root." : "Select a virtual key to generate the config."}
+			emptyMessage={
+				virtualKey
+					? t("mcpRegistry.usageGuide.command.selectServersOrGateway")
+					: t("mcpRegistry.usageGuide.command.selectVirtualKeyForConfig")
+			}
 			harnessName="VS Code"
-			label="Config"
+			label={t("mcpRegistry.usageGuide.command.configLabel")}
 			logoSrc="/images/harness/vscode.svg"
-			registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers)}`}
+			registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers, t)}`}
 		/>
 	);
 }

@@ -12,21 +12,23 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 import { buildProviderUpdatePayload } from "../views/utils";
 import { AllowedRequestsFields } from "./allowedRequestsFields";
 
-// Type for form data
+// 表单数据类型。
 type FormCustomProviderConfig = z.infer<typeof formCustomProviderConfigSchema>;
 
-// Standalone usage (for provider configuration tabs)
+// Provider 配置 tab 中的独立用法。
 interface Props {
 	provider: ModelProvider;
 }
 
-// Standalone component for provider configuration tabs
+// Provider 配置 tab 的独立组件。
 export function ApiStructureFormFragment({ provider }: Props) {
+	const { t } = useTranslation();
 	const hasUpdateProviderAccess = useRbac(RbacResource.ModelProvider, RbacOperation.Update);
 	const dispatch = useAppDispatch();
 	const [updateProvider, { isLoading: isUpdatingProvider }] = useUpdateProviderMutation();
@@ -66,7 +68,7 @@ export function ApiStructureFormFragment({ provider }: Props) {
 	}, [form, provider.name, provider.custom_provider_config]);
 
 	const onSubmit = (data: FormCustomProviderConfig) => {
-		// Create updated provider configuration
+		// 创建更新后的 Provider 配置。
 		updateProvider(
 			buildProviderUpdatePayload(provider, {
 				custom_provider_config: {
@@ -79,11 +81,11 @@ export function ApiStructureFormFragment({ provider }: Props) {
 		)
 			.unwrap()
 			.then(() => {
-				toast.success("Provider configuration updated successfully");
+				toast.success(t("providers.config.shared.toasts.updated"));
 				form.reset(data);
 			})
 			.catch((err) => {
-				toast.error("Failed to update provider configuration", {
+				toast.error(t("providers.config.shared.toasts.updateFailed"), {
 					description: getErrorMessage(err),
 				});
 			});
@@ -103,11 +105,11 @@ export function ApiStructureFormFragment({ provider }: Props) {
 						name="base_provider_type"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Base Provider Type</FormLabel>
+								<FormLabel>{t("providers.config.apiStructure.fields.baseProviderType")}</FormLabel>
 								<Select onValueChange={field.onChange} value={field.value}>
 									<FormControl>
 										<SelectTrigger disabled={true}>
-											<SelectValue placeholder="Select base provider" />
+											<SelectValue placeholder={t("providers.config.apiStructure.placeholders.selectBaseProvider")} />
 										</SelectTrigger>
 									</FormControl>
 									<SelectContent>
@@ -119,7 +121,7 @@ export function ApiStructureFormFragment({ provider }: Props) {
 										<SelectItem value="replicate">Replicate</SelectItem>
 									</SelectContent>
 								</Select>
-								<FormDescription>The underlying provider this custom provider will use</FormDescription>
+								<FormDescription>{t("providers.config.apiStructure.descriptions.baseProviderType")}</FormDescription>
 								<FormMessage />
 							</FormItem>
 						)}
@@ -133,9 +135,9 @@ export function ApiStructureFormFragment({ provider }: Props) {
 									<div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
 										<div className="space-y-0.5">
 											<label htmlFor="drop-excess-requests" className="text-sm font-medium">
-												Is Keyless?
+												{t("providers.config.apiStructure.fields.keyless")}
 											</label>
-											<p className="text-muted-foreground text-sm">Whether the custom provider requires a key</p>
+											<p className="text-muted-foreground text-sm">{t("providers.config.apiStructure.descriptions.keyless")}</p>
 										</div>
 										<Switch
 											id="drop-excess-requests"
@@ -161,18 +163,18 @@ export function ApiStructureFormFragment({ provider }: Props) {
 				{/* Form Actions */}
 				<div className="flex justify-end gap-2 py-2">
 					<Button type="button" variant="outline" onClick={() => form.reset()} disabled={!hasUpdateProviderAccess}>
-						Reset
+						{t("common.actions.reset")}
 					</Button>
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button type="submit" disabled={!form.formState.isDirty || !hasUpdateProviderAccess} isLoading={isUpdatingProvider}>
-									Save API Structure Configuration
+									{t("providers.config.apiStructure.actions.save")}
 								</Button>
 							</TooltipTrigger>
 							{!form.formState.isValid && (
 								<TooltipContent>
-									<p>{form.formState.errors.root?.message || "Please fix validation errors"}</p>
+									<p>{form.formState.errors.root?.message || t("providers.config.shared.validation.fixValidationErrors")}</p>
 								</TooltipContent>
 							)}
 						</Tooltip>
