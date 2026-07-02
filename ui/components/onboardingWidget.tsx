@@ -12,6 +12,7 @@ import type confetti from "canvas-confetti";
 import { ChevronRight, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCookies } from "react-cookie";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 const ONBOARDING_DISMISSED_COOKIE = "bifrost_onboarding_dismissed";
@@ -51,6 +52,7 @@ async function fireConfettiFrom(el: HTMLElement) {
 const parseSkippedIds = (raw: unknown) => (Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : []);
 
 export default function OnboardingWidget() {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [closedForSession, setClosedForSession] = useState(false);
 	// When non-null, the user picked this step and is now configuring it on
@@ -104,28 +106,28 @@ export default function OnboardingWidget() {
 		const common: Step[] = [
 			{
 				id: "cors",
-				title: "Restrict CORS origins",
+				title: t("onboarding.steps.cors"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete: (clientConfig?.allowed_origins?.length ?? 0) > 0,
 			},
 			{
 				id: "dashboard-auth",
-				title: "Set up dashboard auth",
+				title: t("onboarding.steps.dashboardAuth"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete: !!authConfig?.is_enabled && authValueSet(authConfig?.admin_username) && authValueSet(authConfig?.admin_password),
 			},
 			{
 				id: "enforce-inference-auth",
-				title: "Enforce auth on inference",
+				title: t("onboarding.steps.enforceInferenceAuth"),
 				route: "/workspace/config/security",
 				section: "Security",
 				complete: !!clientConfig?.enforce_auth_on_inference,
 			},
 			{
 				id: "provider-key",
-				title: "Add a provider key",
+				title: t("onboarding.steps.providerKey"),
 				route: "/workspace/providers",
 				section: "Provider Setup",
 				complete: (allKeys?.length ?? 0) > 0,
@@ -135,21 +137,21 @@ export default function OnboardingWidget() {
 			? [
 					{
 						id: "scim",
-						title: "Configure SCIM provisioning",
+						title: t("onboarding.steps.scim"),
 						route: "/workspace/scim",
 						section: "Everything Else",
 						complete: (scimProviders?.length ?? 0) > 0,
 					},
 					{
 						id: "models",
-						title: "Configure governance model catalog",
+						title: t("onboarding.steps.models"),
 						route: "/workspace/model-catalog",
 						section: "Everything Else",
 						complete: (modelConfigsResponse?.total_count ?? 0) > 0,
 					},
 					{
 						id: "virtual-keys",
-						title: "Set up virtual keys / access profiles",
+						title: t("onboarding.steps.virtualKeys"),
 						route: "/workspace/virtual-keys",
 						section: "Everything Else",
 						complete: (vksResponse?.total_count ?? 0) > 0,
@@ -157,7 +159,7 @@ export default function OnboardingWidget() {
 				]
 			: [];
 		return [...common, ...enterprise];
-	}, [allKeys, clientConfig, authConfig, scimProviders, modelConfigsResponse, vksResponse]);
+	}, [allKeys, clientConfig, authConfig, scimProviders, modelConfigsResponse, vksResponse, t]);
 
 	// Map step id → checkbox element so we can launch confetti from the
 	// exact tick position when a step transitions to complete.
@@ -278,6 +280,11 @@ export default function OnboardingWidget() {
 	};
 
 	const isWorking = activeStepId !== null;
+	const sectionLabels: Record<Section, string> = {
+		Security: t("onboarding.sections.security"),
+		"Provider Setup": t("onboarding.sections.providerSetup"),
+		"Everything Else": t("onboarding.sections.everythingElse"),
+	};
 
 	return (
 		<>
@@ -312,14 +319,12 @@ export default function OnboardingWidget() {
 							👋
 						</span>
 						<div className="min-w-0 flex-1">
-							<div className="text-sm font-semibold">Setup checklist</div>
-							<div className="text-muted-foreground text-xs">
-								{doneCount} of {steps.length} steps complete
-							</div>
+							<div className="text-sm font-semibold">{t("onboarding.title")}</div>
+							<div className="text-muted-foreground text-xs">{t("onboarding.progress", { done: doneCount, total: steps.length })}</div>
 						</div>
 					</div>
 					<button
-						aria-label="Close for now"
+						aria-label={t("onboarding.closeForNow")}
 						type="button"
 						data-testid="onboarding-close"
 						onClick={() => setClosedForSession(true)}
@@ -346,7 +351,7 @@ export default function OnboardingWidget() {
 									<div
 										className={cn("text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase", idx > 0 && "pt-3")}
 									>
-										{step.section}
+										{sectionLabels[step.section]}
 									</div>
 								)}
 								<div
@@ -389,12 +394,12 @@ export default function OnboardingWidget() {
 												disabled={writingMetadata}
 												className="text-muted-foreground hover:text-foreground text-xs opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
 											>
-												Skip
+												{t("onboarding.actions.skip")}
 											</button>
 											<ChevronRight className="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5" />
 										</>
 									)}
-									{skipped && !step.complete && <span className="text-muted-foreground text-xs">Skipped</span>}
+									{skipped && !step.complete && <span className="text-muted-foreground text-xs">{t("onboarding.skipped")}</span>}
 								</div>
 							</div>
 						);
@@ -407,7 +412,7 @@ export default function OnboardingWidget() {
 						onClick={handleHideForMe}
 						className="text-muted-foreground hover:text-foreground py-2 text-center"
 					>
-						I'll do it later
+						{t("onboarding.actions.later")}
 					</button>
 					<button
 						type="button"
@@ -416,7 +421,7 @@ export default function OnboardingWidget() {
 						disabled={writingMetadata}
 						className="text-muted-foreground hover:text-foreground py-2 text-center disabled:opacity-50"
 					>
-						Hide for everyone
+						{t("onboarding.actions.hideForEveryone")}
 					</button>
 				</CardFooter>
 			</Card>

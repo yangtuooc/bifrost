@@ -11,8 +11,7 @@ import { resetDurationOptions } from "@/lib/constants/governance";
 import { RenderProviderIcon } from "@/lib/constants/icons";
 import { ProviderLabels, ProviderName } from "@/lib/constants/logs";
 import { getModelLimitScope, getModelLimitScopes } from "@/lib/registries/modelLimitScopes";
-// Side-effect import: pulls in downstream scope registrations (e.g. enterprise
-// registers "user" + user picker). The OSS-build fallback is an empty module.
+// 副作用导入：加载下游 scope 注册，OSS 构建中为空模块。
 import "@enterprise/lib/registrations/modelLimitScopes";
 import {
 	getErrorMessage,
@@ -25,8 +24,9 @@ import { KnownProvider } from "@/lib/types/config";
 import { ModelConfig } from "@/lib/types/governance";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -36,36 +36,75 @@ interface ModelLimitSheetProps {
 	onCancel: () => void;
 }
 
-const formSchema = z
-	.object({
-		modelName: z.string().min(1, "Model name is required"),
-		provider: z.string().optional(),
-		scope: z.string().optional(),
-		scopeId: z.string().optional(),
-		budgets: z
-			.array(
-				z.object({
-					id: z.string().optional(),
-					max_limit: z.number().nonnegative().optional(),
-					reset_duration: z.string().optional(),
-				}),
-			)
-			.optional(),
-		tokenMaxLimit: z.number().int().nonnegative().optional(),
-		tokenResetDuration: z.string().optional(),
-		requestMaxLimit: z.number().int().nonnegative().optional(),
-		requestResetDuration: z.string().optional(),
-	})
-	.refine((data) => data.scope !== "virtual_key" || !!data.scopeId, {
-		message: "Virtual key is required for the Virtual Key scope",
-		path: ["scopeId"],
-	});
+type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-type FormData = z.infer<typeof formSchema>;
+const resetDurationLabelKeys: Record<string, string> = {
+	"1m": "common.resetDurations.everyMinute",
+	"5m": "common.resetDurations.everyFiveMinutes",
+	"15m": "common.resetDurations.everyFifteenMinutes",
+	"30m": "common.resetDurations.everyThirtyMinutes",
+	"1h": "common.resetDurations.hourly",
+	"6h": "common.resetDurations.everySixHours",
+	"1d": "common.resetDurations.daily",
+	"1w": "common.resetDurations.weekly",
+	"1M": "common.resetDurations.monthly",
+};
+
+const scopeLabelKeys: Record<string, string> = {
+	global: "modelLimits.scopes.global",
+	virtual_key: "modelLimits.scopes.virtualKey",
+	team: "modelLimits.scopes.team",
+	customer: "modelLimits.scopes.customer",
+	user: "modelLimits.scopes.user",
+};
+
+const formatResetDuration = (duration: string, t: Translate) => {
+	const key = resetDurationLabelKeys[duration];
+	return key ? t(key) : duration;
+};
+
+const formatScopeLabel = (scope: string, fallbackLabel: string, t: Translate) => {
+	const key = scopeLabelKeys[scope];
+	return key ? t(key) : fallbackLabel;
+};
+
+const createFormSchema = (t: Translate) =>
+	z
+		.object({
+			modelName: z.string().min(1, t("modelLimits.validation.modelNameRequired")),
+			provider: z.string().optional(),
+			scope: z.string().optional(),
+			scopeId: z.string().optional(),
+			budgets: z
+				.array(
+					z.object({
+						id: z.string().optional(),
+						max_limit: z.number().nonnegative().optional(),
+						reset_duration: z.string().optional(),
+					}),
+				)
+				.optional(),
+			tokenMaxLimit: z.number().int().nonnegative().optional(),
+			tokenResetDuration: z.string().optional(),
+			requestMaxLimit: z.number().int().nonnegative().optional(),
+			requestResetDuration: z.string().optional(),
+		})
+		.refine((data) => data.scope !== "virtual_key" || !!data.scopeId, {
+			message: t("modelLimits.validation.virtualKeyRequired"),
+			path: ["scopeId"],
+		});
+
+type FormData = z.infer<ReturnType<typeof createFormSchema>>;
 
 export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: ModelLimitSheetProps) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(true);
 	const isEditing = !!modelConfig;
+	const formSchema = useMemo(() => createFormSchema(t), [t]);
+	const resetDurationSelectOptions = useMemo(
+		() => resetDurationOptions.map((option) => ({ ...option, label: formatResetDuration(option.value, t) })),
+		[t],
+	);
 
 	const hasCreateAccess = useRbac(RbacResource.Governance, RbacOperation.Create);
 	const hasUpdateAccess = useRbac(RbacResource.Governance, RbacOperation.Update);
@@ -86,7 +125,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 
 	const availableProviders = providersData || [];
 
-	// Handle provider change - clear model if it doesn't exist for the new provider
+	// 切换 Provider 时，如果当前模型不属于新 Provider，则清空模型。
 	const handleProviderChange = async (newProvider: string, currentModel: string, onChange: (value: string) => void) => {
 		onChange(newProvider);
 		if (!currentModel) return;
@@ -103,7 +142,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 				form.setValue("modelName", "", { shouldDirty: true });
 			}
 		} catch {
-			// On error, don't clear the model
+			// 查询失败时保留当前模型，避免误删用户输入。
 		}
 	};
 
@@ -139,7 +178,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 
 	useEffect(() => {
 		if (modelConfig) {
-			// Never reset form if user is editing - skip reset entirely
+			// 用户正在编辑时不重置表单，避免覆盖未保存输入。
 			if (form.formState.isDirty) {
 				return;
 			}
@@ -163,20 +202,19 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 
 	const onSubmit = async (data: FormData) => {
 		if (!canSubmit) {
-			toast.error("You don't have permission to perform this action");
+			toast.error(t("modelLimits.validation.permissionDenied"));
 			return;
 		}
 
 		if (!hasAnyLimit) {
-			form.setError("root", { message: "At least one budget or rate limit is required" });
+			form.setError("root", { message: t("modelLimits.validation.atLeastOneLimit") });
 			return;
 		}
 
 		try {
 			const provider = data.provider && data.provider.trim() !== "" ? data.provider : undefined;
 
-			// Full desired set of budgets (kept lines with a max_limit). For updates this is
-			// reconciled server-side; an empty array removes all budgets.
+			// 仅提交设置了上限的预算行；更新时由服务端做差异同步，空数组表示移除全部预算。
 			const budgetsPayload = (data.budgets ?? [])
 				.filter((b) => b.max_limit !== undefined && b.max_limit !== null)
 				.map((b) => ({ id: b.id, max_limit: b.max_limit as number, reset_duration: b.reset_duration || "1M" }));
@@ -216,16 +254,13 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 						rate_limit: rateLimitPayload,
 					},
 				}).unwrap();
-				toast.success("Model limit updated successfully");
+				toast.success(t("modelLimits.toasts.updated"));
 			} else {
 				await createModelConfig({
 					model_name: data.modelName,
 					provider,
 					scope: data.scope || "global",
-					// Any scope with a registered PickerComponent carries a target;
-					// global (no picker) sends no scope_id. Mirrors the registry
-					// shape, so adding a new scope (e.g. enterprise's "user")
-					// doesn't need a branch here.
+					// 任何带 PickerComponent 的 scope 都需要目标；global 没有 picker，因此不发送 scope_id。
 					scope_id: getModelLimitScope(data.scope || "global")?.PickerComponent ? data.scopeId : undefined,
 					budgets: budgetsPayload.length > 0 ? budgetsPayload : undefined,
 					rate_limit:
@@ -241,7 +276,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 								}
 							: undefined,
 				}).unwrap();
-				toast.success("Model limit created successfully");
+				toast.success(t("modelLimits.toasts.created"));
 			}
 
 			onSave();
@@ -263,22 +298,22 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 				data-testid="model-limit-sheet"
 			>
 				<SheetHeader className="flex flex-col items-start p-0 px-8 py-4" headerClassName="mb-0 sticky -top-4 bg-card z-10">
-					<SheetTitle>{isEditing ? "Edit Model Limit" : "Create Model Limit"}</SheetTitle>
+					<SheetTitle>{isEditing ? t("modelLimits.sheet.editTitle") : t("modelLimits.sheet.createTitle")}</SheetTitle>
 					<SheetDescription>
-						{isEditing ? "Update budget and rate limit configuration." : "Set up budget and rate limits for a model."}
+						{isEditing ? t("modelLimits.sheet.editDescription") : t("modelLimits.sheet.createDescription")}
 					</SheetDescription>
 				</SheetHeader>
 
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col gap-6">
 						<div className="grow space-y-4 px-8">
-							{/* Provider */}
+							{/* Provider 选择 */}
 							<FormField
 								control={form.control}
 								name="provider"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Provider</FormLabel>
+										<FormLabel>{t("modelLimits.sheet.provider")}</FormLabel>
 										<Select
 											value={field.value || "all"}
 											onValueChange={(value) =>
@@ -288,11 +323,11 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 										>
 											<FormControl>
 												<SelectTrigger className="w-full" data-testid="model-limit-provider-select">
-													<SelectValue placeholder="All Providers" />
+													<SelectValue placeholder={t("common.filters.allProviders")} />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
-												<SelectItem value="all">All Providers</SelectItem>
+												<SelectItem value="all">{t("common.filters.allProviders")}</SelectItem>
 												{availableProviders
 													.filter((p) => p.name)
 													.map((provider) => (
@@ -314,13 +349,13 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 								)}
 							/>
 
-							{/* Model Name */}
+							{/* 模型名称 */}
 							<FormField
 								control={form.control}
 								name="modelName"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Model Name</FormLabel>
+										<FormLabel>{t("modelLimits.sheet.modelName")}</FormLabel>
 										<FormControl>
 											{isEditing ? (
 												<Select value={field.value} disabled>
@@ -328,7 +363,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value={field.value}>{field.value === "*" ? "All Models" : field.value}</SelectItem>
+														<SelectItem value={field.value}>{field.value === "*" ? t("common.filters.allModels") : field.value}</SelectItem>
 													</SelectContent>
 												</Select>
 											) : (
@@ -337,7 +372,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 														provider={form.watch("provider") || undefined}
 														value={field.value}
 														onChange={field.onChange}
-														placeholder="Search for a model..."
+														placeholder={t("modelLimits.sheet.searchModelPlaceholder")}
 														isSingleSelect
 														loadModelsOnEmptyProvider="base_models"
 														allowAllOption
@@ -350,31 +385,31 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 								)}
 							/>
 
-							{/* Scope */}
+							{/* Scope 选择 */}
 							<FormField
 								control={form.control}
 								name="scope"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Scope</FormLabel>
+										<FormLabel>{t("modelLimits.sheet.scope")}</FormLabel>
 										<Select
 											value={field.value || "global"}
 											onValueChange={(value) => {
 												field.onChange(value);
-												// Reset the scope target when switching scopes
+												// 切换 scope 时重置 scope 目标。
 												form.setValue("scopeId", "", { shouldDirty: true });
 											}}
 											disabled={isEditing}
 										>
 											<FormControl>
 												<SelectTrigger className="w-full" data-testid="model-limit-scope-select">
-													<SelectValue placeholder="Global" />
+													<SelectValue placeholder={t("modelLimits.scopes.global")} />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
 												{getModelLimitScopes().map((option) => (
 													<SelectItem key={option.value} value={option.value}>
-														{option.label}
+														{formatScopeLabel(option.value, option.label, t)}
 													</SelectItem>
 												))}
 											</SelectContent>
@@ -384,10 +419,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 								)}
 							/>
 
-							{/* Scope-target picker — driven by the scope registry.
-								Each non-global scope (virtual_key, user, …) registers its
-								own PickerComponent; we render whichever the current scope
-								provides. */}
+							{/* Scope 目标选择器由注册表驱动，非 global scope 会提供自己的 PickerComponent。 */}
 							{(() => {
 								const scopeEntry = getModelLimitScope(form.watch("scope") || "global");
 								const Picker = scopeEntry?.PickerComponent;
@@ -398,7 +430,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 										name="scopeId"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>{scopeEntry.label}</FormLabel>
+												<FormLabel>{formatScopeLabel(scopeEntry.value, scopeEntry.label, t)}</FormLabel>
 												<FormControl>
 													<div data-testid="model-limit-scope-id-select">
 														<Picker
@@ -422,25 +454,26 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 
 							<DottedSeparator />
 
-							{/* Budget Configuration (multi-budget) */}
+							{/* 预算配置（支持多预算行） */}
 							<div className="space-y-4">
 								<MultiBudgetLines
 									data-testid="model-limit-budget-lines"
-									label="Budget"
+									label={t("modelLimits.sheet.budget")}
 									lines={(form.watch("budgets") ?? []).map((b) => ({
 										id: b.id,
 										max_limit: b.max_limit,
 										reset_duration: b.reset_duration ?? "1M",
 									}))}
 									onChange={(lines) => form.setValue("budgets", lines, { shouldDirty: true })}
+									options={resetDurationSelectOptions}
 								/>
 							</div>
 
 							<DottedSeparator />
 
-							{/* Rate Limiting Configuration */}
+							{/* 速率限制配置 */}
 							<div className="space-y-4">
-								<Label className="text-sm font-medium">Rate Limits</Label>
+								<Label className="text-sm font-medium">{t("modelLimits.sheet.rateLimits")}</Label>
 
 								<FormField
 									control={form.control}
@@ -450,12 +483,12 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 											<NumberAndSelect
 												id="modelTokenMaxLimit"
 												labelClassName="font-normal"
-												label="Maximum Tokens"
+												label={t("modelLimits.sheet.maximumTokens")}
 												value={field.value}
 												selectValue={form.watch("tokenResetDuration") || "1h"}
 												onChangeNumber={(value) => field.onChange(value)}
 												onChangeSelect={(value) => form.setValue("tokenResetDuration", value, { shouldDirty: true })}
-												options={resetDurationOptions}
+												options={resetDurationSelectOptions}
 											/>
 											<FormMessage />
 										</FormItem>
@@ -470,12 +503,12 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 											<NumberAndSelect
 												id="modelRequestMaxLimit"
 												labelClassName="font-normal"
-												label="Maximum Requests"
+												label={t("modelLimits.sheet.maximumRequests")}
 												value={field.value}
 												selectValue={form.watch("requestResetDuration") || "1h"}
 												onChangeNumber={(value) => field.onChange(value)}
 												onChangeSelect={(value) => form.setValue("requestResetDuration", value, { shouldDirty: true })}
-												options={resetDurationOptions}
+												options={resetDurationSelectOptions}
 											/>
 											<FormMessage />
 										</FormItem>
@@ -484,16 +517,20 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 								{form.formState.errors.root && <p className="text-destructive text-sm">{form.formState.errors.root.message}</p>}
 							</div>
 
-							{/* Current Usage Display (for editing) */}
+							{/* 编辑时显示当前用量 */}
 							{isEditing && ((modelConfig?.budgets?.length ?? 0) > 0 || modelConfig?.rate_limit) && (
 								<>
 									<DottedSeparator />
 									<div className="space-y-3">
-										<Label className="text-sm font-medium">Current Usage</Label>
+										<Label className="text-sm font-medium">{t("modelLimits.sheet.currentUsage")}</Label>
 										<div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-4">
 											{(modelConfig?.budgets ?? []).map((b) => (
 												<div key={b.id} className="space-y-1">
-													<p className="text-muted-foreground text-xs">Budget ({b.reset_duration})</p>
+													<p className="text-muted-foreground text-xs">
+														{t("modelLimits.sheet.budgetWithDuration", {
+															duration: formatResetDuration(b.reset_duration, t),
+														})}
+													</p>
 													<p className="text-sm font-medium">
 														${b.current_usage.toFixed(2)} / ${b.max_limit.toFixed(2)}
 													</p>
@@ -501,7 +538,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 											))}
 											{modelConfig?.rate_limit?.token_max_limit && (
 												<div className="space-y-1">
-													<p className="text-muted-foreground text-xs">Tokens</p>
+													<p className="text-muted-foreground text-xs">{t("modelLimits.units.tokens")}</p>
 													<p className="text-sm font-medium">
 														{modelConfig.rate_limit.token_current_usage.toLocaleString()} /{" "}
 														{modelConfig.rate_limit.token_max_limit.toLocaleString()}
@@ -510,7 +547,7 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 											)}
 											{modelConfig?.rate_limit?.request_max_limit && (
 												<div className="space-y-1">
-													<p className="text-muted-foreground text-xs">Requests</p>
+													<p className="text-muted-foreground text-xs">{t("modelLimits.units.requests")}</p>
 													<p className="text-sm font-medium">
 														{modelConfig.rate_limit.request_current_usage.toLocaleString()} /{" "}
 														{modelConfig.rate_limit.request_max_limit.toLocaleString()}
@@ -523,15 +560,19 @@ export default function ModelLimitSheet({ modelConfig, onSave, onCancel }: Model
 							)}
 						</div>
 
-						{/* Footer */}
+						{/* 底部操作区 */}
 						<div className="bg-card sticky bottom-0 shrink-0 border-t px-8 py-4">
 							<div className="flex items-center justify-end gap-3">
-								{!canSubmit && <p className="text-destructive text-sm">You don't have permission to perform this action</p>}
+								{!canSubmit && <p className="text-destructive text-sm">{t("modelLimits.validation.permissionDenied")}</p>}
 								<Button type="button" variant="outline" onClick={handleClose}>
-									Cancel
+									{t("common.actions.cancel")}
 								</Button>
 								<Button type="submit" data-testid="model-limit-button-submit" disabled={isLoading || !form.formState.isDirty || !canSubmit}>
-									{isLoading ? "Saving..." : isEditing ? "Save Changes" : "Create Limit"}
+									{isLoading
+										? t("common.actions.saving")
+										: isEditing
+											? t("common.actions.saveChanges")
+											: t("modelLimits.sheet.createAction")}
 								</Button>
 							</div>
 						</div>

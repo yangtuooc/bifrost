@@ -3,7 +3,9 @@ import { CodeEditor } from "@/components/ui/codeEditor";
 import { ChatMessage, ContentBlock } from "@/lib/types/logs";
 import { cn } from "@/lib/utils";
 import { cleanJson, isJson } from "@/lib/utils/validation";
+import type { TFunction } from "i18next";
 import { Download } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import AudioPlayer from "./audioPlayer";
 import CollapsibleBox from "./collapsibleBox";
 
@@ -51,13 +53,30 @@ function downloadFileData(fileData: string, filename: string, fileType?: string)
 	}
 }
 
+function getContentBlockTitle(type: string, t: TFunction) {
+	const titleKeys: Record<string, string> = {
+		text: "logs.details.messageBlocks.text",
+		input_text: "logs.details.messageBlocks.inputText",
+		output_text: "logs.details.messageBlocks.outputText",
+		image_url: "logs.details.messageBlocks.image",
+		input_image: "logs.details.messageBlocks.inputImage",
+		input_audio: "logs.details.messageBlocks.inputAudio",
+		file: "logs.details.messageBlocks.file",
+		input_file: "logs.details.messageBlocks.inputFile",
+	};
+
+	const key = titleKeys[type];
+	return key ? t(key) : type.replaceAll("_", " ");
+}
+
 export function LogChatFileBlockView({ block, className }: { block: ContentBlock; className?: string }) {
+	const { t } = useTranslation();
 	const file = block.file;
 	if (!file) return null;
 
-	const title = file.filename || file.file_id || "Attached file";
+	const title = file.filename || file.file_id || t("logs.details.media.attachedFile");
 	const size = formatFileDataSize(file.file_data);
-	const details = [file.file_type, size, file.file_id ? `ID: ${file.file_id}` : undefined].filter(Boolean);
+	const details = [file.file_type, size, file.file_id ? `${t("logs.details.labels.id")}: ${file.file_id}` : undefined].filter(Boolean);
 	const canDownload = !!file.file_data;
 
 	return (
@@ -74,7 +93,7 @@ export function LogChatFileBlockView({ block, className }: { block: ContentBlock
 						data-testid="file-block-download-btn"
 					>
 						<Download className="h-3.5 w-3.5" />
-						Download
+						{t("logs.details.actions.download")}
 					</Button>
 				)}
 			</div>
@@ -87,7 +106,7 @@ export function LogChatFileBlockView({ block, className }: { block: ContentBlock
 					className="text-primary mt-2 inline-block hover:underline"
 					data-testid="file-block-open-link"
 				>
-					Open file
+					{t("logs.details.actions.openFile")}
 				</a>
 			)}
 		</div>
@@ -95,9 +114,10 @@ export function LogChatFileBlockView({ block, className }: { block: ContentBlock
 }
 
 function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
-	const blockType = block.type.replaceAll("_", " ");
+	const { t } = useTranslation();
+	const blockType = getContentBlockTitle(block.type, t);
 
-	// Handle text content
+	// 处理文本内容
 	if (block.text) {
 		if (isJson(block.text)) {
 			const jsonContent = JSON.stringify(cleanJson(block.text), null, 2);
@@ -125,15 +145,15 @@ function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
 		);
 	}
 
-	// Handle image content
+	// 处理图片内容
 	if (block.image_url) {
 		const src = block.image_url.url;
 		if (src) {
-			return <img src={src} alt="Attached image" className="max-w-full rounded border" />;
+			return <img src={src} alt={t("logs.details.alt.attachedImage")} className="max-w-full rounded border" />;
 		}
 	}
 
-	// Handle file content
+	// 处理文件内容
 	if (block.file) {
 		return (
 			<CollapsibleBox title={blockType} onCopy={() => JSON.stringify(block.file, null, 2)} collapsedHeight={100}>
@@ -142,7 +162,7 @@ function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
 		);
 	}
 
-	// Handle audio content
+	// 处理音频内容
 	if (block.input_audio) {
 		const jsonContent = JSON.stringify(block.input_audio, null, 2);
 		return (
@@ -165,19 +185,29 @@ function ContentBlockView({ block }: { block: ContentBlock; index: number }) {
 }
 
 export default function LogChatMessageView({ message, audioFormat }: LogChatMessageViewProps) {
+	const { t } = useTranslation();
+
 	return (
 		<div className="flex w-full flex-col gap-2">
-			{/* Role header */}
+			{/* 角色标题 */}
 			<div className="flex items-center gap-2">
-				<span className="text-sm font-medium capitalize">{message.role}</span>
-				{message.tool_call_id && <span className="text-muted-foreground text-xs">Tool Call ID: {message.tool_call_id}</span>}
+				<span className="text-sm font-medium capitalize">{t(`logs.details.roles.${message.role}`, { defaultValue: message.role })}</span>
+				{message.tool_call_id && (
+					<span className="text-muted-foreground text-xs">
+						{t("logs.details.labels.toolCallId")}: {message.tool_call_id}
+					</span>
+				)}
 			</div>
 
-			{/* Handle reasoning content */}
+			{/* 处理 reasoning 内容 */}
 			{message.reasoning && (
 				<>
 					{isJson(message.reasoning) ? (
-						<CollapsibleBox title="Reasoning" onCopy={() => JSON.stringify(cleanJson(message.reasoning), null, 2)} collapsedHeight={100}>
+						<CollapsibleBox
+							title={t("logs.details.labels.reasoning")}
+							onCopy={() => JSON.stringify(cleanJson(message.reasoning), null, 2)}
+							collapsedHeight={100}
+						>
 							<CodeEditor
 								className="z-0 w-full"
 								shouldAdjustInitialHeight={true}
@@ -190,7 +220,7 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 							/>
 						</CollapsibleBox>
 					) : (
-						<CollapsibleBox title="Reasoning" onCopy={() => message.reasoning || ""} collapsedHeight={100}>
+						<CollapsibleBox title={t("logs.details.labels.reasoning")} onCopy={() => message.reasoning || ""} collapsedHeight={100}>
 							<div className="custom-scrollbar text-muted-foreground max-h-[400px] overflow-y-auto px-6 py-2 font-mono text-xs break-words whitespace-pre-wrap italic">
 								{message.reasoning}
 							</div>
@@ -199,11 +229,15 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 				</>
 			)}
 
-			{/* Handle refusal content */}
+			{/* 处理拒答内容 */}
 			{message.refusal && (
 				<>
 					{isJson(message.refusal) ? (
-						<CollapsibleBox title="Refusal" onCopy={() => JSON.stringify(cleanJson(message.refusal), null, 2)} collapsedHeight={100}>
+						<CollapsibleBox
+							title={t("logs.details.labels.refusal")}
+							onCopy={() => JSON.stringify(cleanJson(message.refusal), null, 2)}
+							collapsedHeight={100}
+						>
 							<CodeEditor
 								className="z-0 w-full"
 								shouldAdjustInitialHeight={true}
@@ -216,7 +250,7 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 							/>
 						</CollapsibleBox>
 					) : (
-						<CollapsibleBox title="Refusal" onCopy={() => message.refusal || ""} collapsedHeight={100}>
+						<CollapsibleBox title={t("logs.details.labels.refusal")} onCopy={() => message.refusal || ""} collapsedHeight={100}>
 							<div className="custom-scrollbar max-h-[400px] overflow-y-auto px-6 py-2 font-mono text-xs break-words whitespace-pre-wrap text-red-800">
 								{message.refusal}
 							</div>
@@ -225,14 +259,14 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 				</>
 			)}
 
-			{/* Handle content */}
+			{/* 处理正文内容 */}
 			{message.content && (
 				<>
 					{typeof message.content === "string" ? (
 						<>
 							{isJson(message.content) ? (
 								<CollapsibleBox
-									title="Content"
+									title={t("logs.details.labels.content")}
 									onCopy={() => JSON.stringify(cleanJson(message.content as string), null, 2)}
 									collapsedHeight={100}
 								>
@@ -248,7 +282,11 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 									/>
 								</CollapsibleBox>
 							) : (
-								<CollapsibleBox title="Content" onCopy={() => (message.content as string) || ""} collapsedHeight={100}>
+								<CollapsibleBox
+									title={t("logs.details.labels.content")}
+									onCopy={() => (message.content as string) || ""}
+									collapsedHeight={100}
+								>
 									<div className="custom-scrollbar max-h-[400px] overflow-y-auto px-6 py-2 font-mono text-xs break-words whitespace-pre-wrap">
 										{message.content}
 									</div>
@@ -262,7 +300,7 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 				</>
 			)}
 
-			{/* Handle tool calls */}
+			{/* 处理工具调用 */}
 			{message.tool_calls && message.tool_calls.length > 0 && (
 				<>
 					{message.tool_calls.map((toolCall, index) => {
@@ -270,7 +308,7 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 						return (
 							<CollapsibleBox
 								key={index}
-								title={`Tool Call: ${toolCall.function?.name || `#${index + 1}`}`}
+								title={t("logs.details.messageBlocks.toolCall", { name: toolCall.function?.name || `#${index + 1}` })}
 								onCopy={() => jsonContent}
 								collapsedHeight={100}
 							>
@@ -290,9 +328,13 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 				</>
 			)}
 
-			{/* Handle annotations */}
+			{/* 处理注释信息 */}
 			{message.annotations && message.annotations.length > 0 && (
-				<CollapsibleBox title="Annotations" onCopy={() => JSON.stringify(message.annotations, null, 2)} collapsedHeight={100}>
+				<CollapsibleBox
+					title={t("logs.details.labels.annotations")}
+					onCopy={() => JSON.stringify(message.annotations, null, 2)}
+					collapsedHeight={100}
+				>
 					<CodeEditor
 						className="z-0 w-full"
 						shouldAdjustInitialHeight={true}
@@ -306,25 +348,25 @@ export default function LogChatMessageView({ message, audioFormat }: LogChatMess
 				</CollapsibleBox>
 			)}
 
-			{/* Handle audio output */}
+			{/* 处理音频输出 */}
 			{message.audio && (
-				<CollapsibleBox title="Audio Output" collapsedHeight={150}>
+				<CollapsibleBox title={t("logs.details.labels.audioOutput")} collapsedHeight={150}>
 					<div className="space-y-4 px-6 py-4">
 						{message.audio.transcript && (
 							<div className="space-y-2">
-								<div className="text-muted-foreground text-xs font-medium">Transcript:</div>
+								<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.transcript")}:</div>
 								<div className="font-mono text-xs break-words whitespace-pre-wrap">{message.audio.transcript}</div>
 							</div>
 						)}
 						{message.audio.data && (
 							<div className="space-y-2">
-								<div className="text-muted-foreground text-xs font-medium">Audio:</div>
+								<div className="text-muted-foreground text-xs font-medium">{t("logs.details.labels.audio")}:</div>
 								<AudioPlayer src={message.audio.data} format={audioFormat} />
 							</div>
 						)}
 						{message.audio.id && (
 							<div className="text-muted-foreground text-xs">
-								ID: {message.audio.id} | Expires:{" "}
+								{t("logs.details.labels.id")}: {message.audio.id} | {t("logs.details.labels.expires")}:{" "}
 								{message.audio.expires_at && Number.isFinite(message.audio.expires_at)
 									? new Date(message.audio.expires_at * 1000).toLocaleString()
 									: "N/A"}

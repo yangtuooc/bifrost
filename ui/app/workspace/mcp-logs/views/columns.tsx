@@ -7,19 +7,30 @@ import { ColumnDef, Row } from "@tanstack/react-table";
 import { format, isValid } from "date-fns";
 import { ArrowUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 
-// Helper function to validate status and return a safe Status value
+// 校验状态并返回安全的 Status 值。
 const getValidatedStatus = (status: string): Status => {
-	// Check if status is a valid Status by checking against Statuses array
 	if (Statuses.includes(status as Status)) {
 		return status as Status;
 	}
-	// Fallback to "processing" for unknown statuses
 	return "processing";
 };
+
+interface MCPColumnLabels {
+	time: string;
+	toolName: string;
+	server: string;
+	latency: string;
+	cost: string;
+	virtualKey: string;
+	logActions: string;
+	delete: string;
+	invalidDate: string;
+}
 
 export const createMCPColumns = (
 	handleDelete: (log: MCPToolLogEntry) => Promise<void>,
 	hasDeleteAccess: boolean,
+	labels: MCPColumnLabels,
 ): ColumnDef<MCPToolLogEntry>[] => [
 	{
 		accessorKey: "status",
@@ -35,7 +46,7 @@ export const createMCPColumns = (
 		accessorKey: "timestamp",
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-				Time
+				{labels.time}
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
@@ -43,12 +54,12 @@ export const createMCPColumns = (
 		cell: ({ row }) => {
 			const timestamp = row.original.timestamp;
 			const date = new Date(timestamp);
-			return <div className="truncate text-xs">{isValid(date) ? format(date, "yyyy-MM-dd hh:mm:ss aa (XXX)") : "Invalid date"}</div>;
+			return <div className="truncate text-xs">{isValid(date) ? format(date, "yyyy-MM-dd hh:mm:ss aa (XXX)") : labels.invalidDate}</div>;
 		},
 	},
 	{
 		accessorKey: "tool_name",
-		header: "Tool Name",
+		header: labels.toolName,
 		size: 300,
 		cell: ({ row }) => {
 			const toolName = row.getValue("tool_name") as string;
@@ -57,7 +68,7 @@ export const createMCPColumns = (
 	},
 	{
 		accessorKey: "server_label",
-		header: "Server",
+		header: labels.server,
 		size: 150,
 		cell: ({ row }) => {
 			const serverLabel = row.getValue("server_label") as string;
@@ -74,7 +85,7 @@ export const createMCPColumns = (
 		accessorKey: "latency",
 		header: ({ column }) => (
 			<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-				Latency
+				{labels.latency}
 				<ArrowUpDown className="ml-2 h-4 w-4" />
 			</Button>
 		),
@@ -88,7 +99,7 @@ export const createMCPColumns = (
 	},
 	{
 		accessorKey: "cost",
-		header: "Cost",
+		header: labels.cost,
 		size: 120,
 		cell: ({ row }) => {
 			const cost = row.original.cost;
@@ -98,7 +109,7 @@ export const createMCPColumns = (
 	},
 	{
 		id: "virtual_key",
-		header: "Virtual Key",
+		header: labels.virtualKey,
 		size: 170,
 		cell: ({ row }) => {
 			const value = row.original.virtual_key?.name ?? row.original.virtual_key_name ?? row.original.virtual_key_id;
@@ -117,7 +128,7 @@ export const createMCPColumns = (
 							<div className="flex justify-center">
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
-										<Button variant="ghost" size="icon" data-testid="log-actions-btn" aria-label="Log actions" className="h-7 w-7">
+										<Button variant="ghost" size="icon" data-testid="log-actions-btn" aria-label={labels.logActions} className="h-7 w-7">
 											<MoreHorizontal className="h-4 w-4" />
 										</Button>
 									</DropdownMenuTrigger>
@@ -132,7 +143,7 @@ export const createMCPColumns = (
 											}}
 										>
 											<Trash2 className="h-4 w-4" />
-											Delete
+											{labels.delete}
 										</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>

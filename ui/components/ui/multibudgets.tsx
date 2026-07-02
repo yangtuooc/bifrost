@@ -4,6 +4,7 @@ import NumberAndSelect from "@/components/ui/numberAndSelect";
 import { resetDurationOptions } from "@/lib/constants/governance";
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface BudgetLineEntry {
 	id?: string;
@@ -23,14 +24,16 @@ interface MultiBudgetLinesProps {
 
 export default function MultiBudgetLines({
 	"data-testid": testId,
-	label = "Budget Configuration",
+	label,
 	lines,
 	onChange,
 	options = resetDurationOptions,
 	onReset,
 	showReset,
 }: MultiBudgetLinesProps) {
-	// Track which reset durations are already used (for duplicate detection)
+	const { t } = useTranslation();
+
+	// 统计已使用的重置周期，用于检测重复预算行。
 	const usedDurations = useMemo(() => {
 		const counts = new Map<string, number>();
 		for (const line of lines) {
@@ -40,7 +43,7 @@ export default function MultiBudgetLines({
 	}, [lines]);
 
 	function addLine() {
-		// Pick the first unused duration, falling back to the first option value
+		// 优先选择第一个未使用周期，兜底使用第一个可选项。
 		const usedSet = new Set(lines.map((l) => l.reset_duration));
 		const available = options.find((o) => !usedSet.has(o.value));
 		onChange([
@@ -71,23 +74,25 @@ export default function MultiBudgetLines({
 	return (
 		<div className="space-y-3" data-testid={testId}>
 			<div className="flex items-center justify-between">
-				<Label className="text-sm font-medium">{label}</Label>
+				<Label className="text-sm font-medium">{label ?? t("common.budgets.configuration")}</Label>
 				<div className="flex items-center gap-2">
 					{onReset && (showReset ?? true) && (
 						<Button data-testid={`${testId}-reset-btn`} type="button" variant="ghost" size="sm" onClick={onReset}>
 							<RotateCcw className="mr-1 h-3 w-3" />
-							Reset
+							{t("common.actions.reset")}
 						</Button>
 					)}
 					<Button data-testid={`${testId}-add-btn`} variant="outline" size="sm" type="button" onClick={addLine}>
 						<Plus className="mr-1 h-3 w-3" />
-						Add Budget
+						{t("common.budgets.add")}
 					</Button>
 				</div>
 			</div>
 
 			{lines.length === 0 && (
-				<div className="text-muted-foreground rounded-md border border-dashed p-3 text-center text-sm">No budget limits configured.</div>
+				<div className="text-muted-foreground rounded-md border border-dashed p-3 text-center text-sm">
+					{t("common.budgets.noneConfigured")}
+				</div>
 			)}
 
 			{lines.map((line, index) => {
@@ -100,7 +105,7 @@ export default function MultiBudgetLines({
 									id={`${testId}-${index}`}
 									dataTestId={`${testId}-amount-${index}`}
 									labelClassName="font-normal"
-									label="Maximum Spend (USD)"
+									label={t("common.budgets.maximumSpendUsd")}
 									value={line.max_limit}
 									selectValue={line.reset_duration}
 									onChangeNumber={(value) => updateMaxLimit(index, value)}
@@ -110,7 +115,7 @@ export default function MultiBudgetLines({
 							</div>
 							<Button
 								data-testid={`${testId}-remove-${index}`}
-								aria-label={`Remove budget ${index + 1}`}
+								aria-label={t("common.budgets.removeAria", { index: index + 1 })}
 								variant="ghost"
 								size="icon"
 								type="button"
@@ -120,9 +125,7 @@ export default function MultiBudgetLines({
 								<Trash2 className="h-4 w-4" />
 							</Button>
 						</div>
-						{isDuplicate && (
-							<p className="text-destructive pl-0.5 text-xs">Duplicate reset period — each budget line must use a different interval.</p>
-						)}
+						{isDuplicate && <p className="text-destructive pl-0.5 text-xs">{t("common.budgets.duplicateResetPeriod")}</p>}
 					</div>
 				);
 			})}

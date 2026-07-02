@@ -11,6 +11,7 @@ import { getRangeForPeriod, TIME_PERIODS } from "@/lib/utils/timeRange";
 import { useLocation } from "@tanstack/react-router";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { type ChartType } from "./components/charts/chartTypeToggle";
 import { ModelFilterSelect } from "./components/charts/modelFilterSelect";
 import { ExportPopover } from "./components/exportPopover";
@@ -24,6 +25,8 @@ import type { DashboardData } from "./utils/exportUtils";
 const toChartType = (value: string): ChartType => (value === "line" ? "line" : "bar");
 
 export default function DashboardPage() {
+	const { t } = useTranslation();
+
 	// MCP filter data
 	const { data: mcpFilterData } = useGetMCPAvailableFilterDataQuery();
 
@@ -421,7 +424,7 @@ export default function DashboardPage() {
 				{/* Header */}
 				<div className="flex items-center justify-between p-4">
 					<div className="flex items-center gap-2">
-						<h1 className="text-lg font-semibold">Dashboard</h1>
+						<h1 className="text-lg font-semibold">{t("dashboard.title")}</h1>
 					</div>
 					<div className="flex items-center gap-2">
 						<ExportPopover
@@ -443,7 +446,7 @@ export default function DashboardPage() {
 												setUrlState({ mcp_tool_names: value });
 											}
 										}}
-										placeholder="All Tools"
+										placeholder={t("dashboard.filters.allTools")}
 										data-testid="dashboard-mcp-tool-filter"
 									/>
 								)}
@@ -458,7 +461,7 @@ export default function DashboardPage() {
 												setUrlState({ mcp_server_labels: value });
 											}
 										}}
-										placeholder="All Servers"
+										placeholder={t("dashboard.filters.allServers")}
 										data-testid="dashboard-mcp-server-filter"
 									/>
 								)}
@@ -485,31 +488,31 @@ export default function DashboardPage() {
 						<div className="mb-2 max-w-full overflow-x-auto">
 							<TabsList className="w-max min-w-max">
 								<TabsTrigger className="shrink-0" value="overview" data-testid="dashboard-tab-overview">
-									Overview
+									{t("dashboard.tabs.overview")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="provider-usage" data-testid="dashboard-tab-provider-usage">
-									Provider Usage
+									{t("dashboard.tabs.providerUsage")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="rankings" data-testid="dashboard-tab-rankings">
-									Model Rankings
+									{t("dashboard.tabs.modelRankings")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="mcp" data-testid="dashboard-tab-mcp">
-									MCP usage
+									{t("dashboard.tabs.mcpUsage")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="team-rankings" data-testid="dashboard-tab-team-rankings">
-									Team Rankings
+									{t("dashboard.tabs.teamRankings")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="user-rankings" data-testid="dashboard-tab-user-rankings">
-									User Rankings
+									{t("dashboard.tabs.userRankings")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="virtual-key-rankings" data-testid="dashboard-tab-virtual-key-rankings">
-									Virtual Key Rankings
+									{t("dashboard.tabs.virtualKeyRankings")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="customer-rankings" data-testid="dashboard-tab-customer-rankings">
-									Customer Rankings
+									{t("dashboard.tabs.customerRankings")}
 								</TabsTrigger>
 								<TabsTrigger className="shrink-0" value="bu-rankings" data-testid="dashboard-tab-bu-rankings">
-									BU Rankings
+									{t("dashboard.tabs.businessUnitRankings")}
 								</TabsTrigger>
 							</TabsList>
 						</div>
@@ -604,7 +607,7 @@ export default function DashboardPage() {
 									filters={filters}
 									active={activeTab === "team-rankings" || pdfMode}
 									dimension="team"
-									dimensionLabel="Team"
+									dimensionLabel={t("dashboard.dimensions.team")}
 									testIdPrefix="dashboard-team-rankings"
 									dataKey="teamRankingsData"
 								/>
@@ -619,7 +622,7 @@ export default function DashboardPage() {
 									filters={filters}
 									active={activeTab === "customer-rankings" || pdfMode}
 									dimension="customer"
-									dimensionLabel="Customer"
+									dimensionLabel={t("dashboard.dimensions.customer")}
 									testIdPrefix="dashboard-customer-rankings"
 									dataKey="customerRankingsData"
 								/>
@@ -634,7 +637,7 @@ export default function DashboardPage() {
 									filters={filters}
 									active={activeTab === "bu-rankings" || pdfMode}
 									dimension="business_unit"
-									dimensionLabel="Business Unit"
+									dimensionLabel={t("dashboard.dimensions.businessUnit")}
 									testIdPrefix="dashboard-bu-rankings"
 									dataKey="buRankingsData"
 								/>
@@ -649,7 +652,7 @@ export default function DashboardPage() {
 									filters={filters}
 									active={activeTab === "user-rankings" || pdfMode}
 									dimension="user"
-									dimensionLabel="User"
+									dimensionLabel={t("dashboard.dimensions.user")}
 									testIdPrefix="dashboard-user-rankings"
 									dataKey="userRankingsData"
 								/>
@@ -664,7 +667,7 @@ export default function DashboardPage() {
 									filters={filters}
 									active={activeTab === "virtual-key-rankings" || pdfMode}
 									dimension="virtual_key"
-									dimensionLabel="Virtual Key"
+									dimensionLabel={t("dashboard.dimensions.virtualKey")}
 									testIdPrefix="dashboard-virtual-key-rankings"
 									dataKey="virtualKeyRankingsData"
 								/>

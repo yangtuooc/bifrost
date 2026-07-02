@@ -1,18 +1,11 @@
-// Per-row actions menu for an OAuth grant: a dropdown exposing "View auth
-// sessions" (deep-link into MCP sessions pre-filtered to this grant's exact
-// identity) and a destructive "Revoke" action. The revoke confirmation itself
-// is owned by the page via onRevoke.
+// OAuth grant 行级操作菜单：可跳转到按当前身份预筛选的 auth sessions，也可触发 revoke 确认弹窗。
 
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdownMenu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdownMenu";
 import type { OAuth2GrantRow } from "@/lib/store/apis/oauth2SessionsApi";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface GrantActionsProps {
 	row: OAuth2GrantRow;
@@ -22,17 +15,22 @@ interface GrantActionsProps {
 }
 
 export default function GrantActions({ row, revoking, isPendingRow, onRevoke }: GrantActionsProps) {
+	const { t } = useTranslation();
 	const busy = revoking;
-	// Link to Auth Sessions pre-filtered to this grant's exact identity: the
-	// mode plus the identity filter, which exact-matches bf_sub against the
-	// session's user_id / virtual key id / session id, so the user lands on
-	// just this identity's sessions.
+	// 跳转到按当前 grant 身份精确过滤后的 Auth Sessions 页面。
 	const authSessionsUrl = `/workspace/mcp-sessions?auth_mode=${row.bf_mode}&identity=${encodeURIComponent(row.bf_sub)}`;
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button data-testid="oauth-grants-actions-trigger" variant="ghost" size="icon" className="h-8 w-8" aria-label="Grant actions" disabled={busy}>
+				<Button
+					data-testid="oauth-grants-actions-trigger"
+					variant="ghost"
+					size="icon"
+					className="h-8 w-8"
+					aria-label={t("oauthGrants.actions.grantActions")}
+					disabled={busy}
+				>
 					{busy && isPendingRow ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
 				</Button>
 			</DropdownMenuTrigger>
@@ -41,7 +39,7 @@ export default function GrantActions({ row, revoking, isPendingRow, onRevoke }: 
 					<DropdownMenuItem asChild className="cursor-pointer">
 						<Link to={authSessionsUrl} data-testid="oauth-grants-view-sessions-link">
 							<ExternalLink className="h-4 w-4" />
-							View auth sessions
+							{t("oauthGrants.actions.viewAuthSessions")}
 						</Link>
 					</DropdownMenuItem>
 				)}
@@ -50,10 +48,13 @@ export default function GrantActions({ row, revoking, isPendingRow, onRevoke }: 
 					variant="destructive"
 					className="cursor-pointer"
 					disabled={busy}
-					onSelect={(e) => { e.preventDefault(); onRevoke(); }}
+					onSelect={(e) => {
+						e.preventDefault();
+						onRevoke();
+					}}
 				>
 					<Trash2 className="h-4 w-4" />
-					Revoke
+					{t("oauthGrants.actions.revoke")}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { buildWindsurfConfig } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { HarnessInstallProps } from "../types";
@@ -12,6 +13,7 @@ export function WindsurfHarnessInstall({
 	serverScope,
 	virtualKey,
 }: HarnessInstallProps) {
+	const { t } = useTranslation();
 	const configPath = `${getUserHomePrefix(platform)}/.codeium/windsurf/mcp_config.json`;
 
 	const config = useMemo(() => {
@@ -28,12 +30,16 @@ export function WindsurfHarnessInstall({
 			canCopyCommand={canGenerateCommand}
 			command={config}
 			controls={null}
-			copySuccessMessage="Config copied"
-			emptyMessage={virtualKey ? "Select servers or use Gateway root." : "Select a virtual key to generate the config."}
+			copySuccessMessage={t("mcpRegistry.usageGuide.command.configCopied")}
+			emptyMessage={
+				virtualKey
+					? t("mcpRegistry.usageGuide.command.selectServersOrGateway")
+					: t("mcpRegistry.usageGuide.command.selectVirtualKeyForConfig")
+			}
 			harnessName="Windsurf (Devin)"
-			label="Config"
+			label={t("mcpRegistry.usageGuide.command.configLabel")}
 			logoSrc="/images/harness/windsurf.svg"
-			registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers)}`}
+			registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers, t)}`}
 		/>
 	);
 }

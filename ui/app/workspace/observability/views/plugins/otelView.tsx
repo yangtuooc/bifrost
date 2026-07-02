@@ -4,6 +4,7 @@ import { OtelFormSchema } from "@/lib/types/schemas";
 import { toHeaderStringMap } from "@/lib/utils/secretVarForm";
 import { Activity } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { OtelFormFragment } from "../../fragments/otelFormFragment";
 import PluginTracingSheet from "../../sheets/pluginTracingSheet";
@@ -14,14 +15,14 @@ interface OtelViewProps {
 }
 
 export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
+	const { t } = useTranslation();
 	const selectedPlugin = useAppSelector((state) => state.plugin.selectedPlugin);
 	const currentConfig = useMemo(() => ({ config: selectedPlugin?.config, enabled: selectedPlugin?.enabled }), [selectedPlugin]);
 	const [updatePlugin] = useUpdatePluginMutation();
 	const [isTracingSheetOpen, setIsTracingSheetOpen] = useState(false);
 
 	const handleOtelConfigSave = (config: OtelFormSchema): Promise<void> => {
-		// The backend stores headers as a plain "env.VAR"/literal string map, so flatten the
-		// SecretVar form values here. The config is sent as the { profiles: [...] } wrapper.
+		// 后端将 headers 存为普通 "env.VAR"/literal 字符串 map，因此这里展开 SecretVar 表单值。
 		const profiles = config.profiles.map((profile) => ({
 			...profile,
 			headers: toHeaderStringMap(profile.headers),
@@ -38,10 +39,10 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 				.unwrap()
 				.then(() => {
 					resolve();
-					toast.success("OTEL configuration updated successfully");
+					toast.success(t("observability.otel.toasts.updated"));
 				})
 				.catch((err) => {
-					toast.error("Failed to update OTEL configuration", {
+					toast.error(t("observability.otel.toasts.updateFailed"), {
 						description: getErrorMessage(err),
 					});
 					reject(err);
@@ -61,7 +62,7 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 						data-testid="otel-configure-tracing-button"
 					>
 						<Activity className="h-4 w-4" />
-						Configure Plugin Tracing
+						{t("observability.pluginTracing.title")}
 					</Button>
 				</div>
 				<OtelFormFragment onSave={handleOtelConfigSave} currentConfig={currentConfig} onDelete={onDelete} isDeleting={isDeleting} />
@@ -70,7 +71,7 @@ export default function OtelView({ onDelete, isDeleting }: OtelViewProps) {
 				open={isTracingSheetOpen}
 				onClose={() => setIsTracingSheetOpen(false)}
 				pluginName="otel"
-				destination="the OTEL collector"
+				destination={t("observability.otel.destination")}
 			/>
 		</div>
 	);

@@ -6,12 +6,14 @@ import { getErrorMessage, useGetCustomersQuery, useGetTeamsQuery, useGetVirtualK
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { parseAsInteger, useQueryStates } from "nuqs";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 const POLLING_INTERVAL = 5000;
 const PAGE_SIZE = 25;
 
 export default function GovernanceCustomersPage() {
+	const { t } = useTranslation();
 	const hasVirtualKeysAccess = useRbac(RbacResource.VirtualKeys, RbacOperation.View);
 	const hasTeamsAccess = useRbac(RbacResource.Teams, RbacOperation.View);
 	const hasCustomersAccess = useRbac(RbacResource.Customers, RbacOperation.View);
@@ -76,13 +78,13 @@ export default function GovernanceCustomersPage() {
 		if (shownErrorsRef.current.has(errorKey)) return;
 		shownErrorsRef.current.add(errorKey);
 		if (vkError && teamsError && customersError) {
-			toast.error("Failed to load governance data.");
+			toast.error(t("governance.common.toasts.loadGovernanceDataFailed"));
 		} else {
-			if (vkError) toast.error(`Failed to load virtual keys: ${getErrorMessage(vkError)}`);
-			if (teamsError) toast.error(`Failed to load teams: ${getErrorMessage(teamsError)}`);
-			if (customersError) toast.error(`Failed to load customers: ${getErrorMessage(customersError)}`);
+			if (vkError) toast.error(t("governance.common.toasts.loadVirtualKeysFailed", { error: getErrorMessage(vkError) }));
+			if (teamsError) toast.error(t("governance.common.toasts.loadTeamsFailed", { error: getErrorMessage(teamsError) }));
+			if (customersError) toast.error(t("governance.common.toasts.loadCustomersFailed", { error: getErrorMessage(customersError) }));
 		}
-	}, [vkError, teamsError, customersError]);
+	}, [vkError, teamsError, customersError, t]);
 
 	if (isLoading) {
 		return <FullPageLoader />;

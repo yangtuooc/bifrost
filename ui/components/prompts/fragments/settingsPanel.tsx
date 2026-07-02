@@ -14,11 +14,13 @@ import { ModelParams } from "@/lib/types/prompts";
 import { cn } from "@/lib/utils";
 import { PromptDeploymentsAccordionItem } from "@enterprise/components/prompt-deployments/promptDeploymentsAccordionItem";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ApiKeySelectorView } from "../components/apiKeySelectorView";
 import { VariablesTableView } from "../components/variablesTableView";
 import { usePromptContext } from "../context";
 
 export function SettingsPanel() {
+	const { t } = useTranslation();
 	const {
 		provider,
 		setProvider,
@@ -167,7 +169,7 @@ export function SettingsPanel() {
 							data-testid="prompts-configuration-trigger"
 							className="text-muted-foreground shrink-0 py-3 pr-1 text-xs font-medium uppercase hover:no-underline"
 						>
-							<span className="min-w-0 flex-1 text-left font-semibold">Configuration</span>
+							<span className="min-w-0 flex-1 text-left font-semibold">{t("prompts.settings.configuration")}</span>
 						</AccordionTrigger>
 						<AccordionContent
 							containerClassName="data-[state=open]:flex data-[state=open]:min-h-0 data-[state=open]:flex-1 data-[state=open]:flex-col"
@@ -175,18 +177,18 @@ export function SettingsPanel() {
 						>
 							<div className="space-y-6">
 								<div className="flex flex-col gap-2" data-testid="settings-provider">
-									<Label className="text-muted-foreground text-xs font-medium uppercase">Provider</Label>
+									<Label className="text-muted-foreground text-xs font-medium uppercase">{t("prompts.settings.provider")}</Label>
 									<ComboboxSelect
 										options={providerOptions}
 										value={provider}
 										onValueChange={(v) => v && onProviderChange(v)}
-										placeholder="Select provider"
+										placeholder={t("prompts.settings.selectProvider")}
 										hideClear
 									/>
 								</div>
 
 								<div className="flex flex-col gap-2" data-testid="settings-model">
-									<Label className="text-muted-foreground text-xs font-medium uppercase">Model</Label>
+									<Label className="text-muted-foreground text-xs font-medium uppercase">{t("prompts.settings.model")}</Label>
 									<ModelMultiselect
 										provider={provider}
 										keys={filterKeys && filterKeys.length > 0 ? filterKeys : undefined}
@@ -194,7 +196,7 @@ export function SettingsPanel() {
 										value={model}
 										onChange={(v) => onModelChange(v)}
 										isSingleSelect
-										placeholder={!provider ? "Select a provider first" : "Select model"}
+										placeholder={!provider ? t("prompts.settings.selectProviderFirst") : t("prompts.settings.selectModel")}
 										disabled={!provider}
 										unfiltered={true}
 									/>
@@ -221,10 +223,8 @@ export function SettingsPanel() {
 									<>
 										<Separator />
 										<div className="flex flex-col gap-2" data-testid="settings-required-headers">
-											<Label className="text-muted-foreground text-xs font-medium uppercase">Required Headers</Label>
-											<p className="text-muted-foreground text-xs">
-												These headers are required by the server. Provide a value for each to send requests from the playground.
-											</p>
+											<Label className="text-muted-foreground text-xs font-medium uppercase">{t("prompts.settings.requiredHeaders")}</Label>
+											<p className="text-muted-foreground text-xs">{t("prompts.settings.requiredHeadersDescription")}</p>
 											<div className="flex flex-col gap-2">
 												{requiredHeaders.map((name) => (
 													<div key={name} className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export function SettingsPanel() {
 															id={`required-header-${name}`}
 															value={customHeaders[name] ?? ""}
 															onChange={(e) => setCustomHeaders((prev) => ({ ...prev, [name]: e.target.value }))}
-															placeholder="value"
+															placeholder={t("prompts.settings.valuePlaceholder")}
 															className="h-8 flex-1"
 														/>
 													</div>

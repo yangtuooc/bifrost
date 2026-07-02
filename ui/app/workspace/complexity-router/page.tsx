@@ -29,9 +29,11 @@ import {
 import { cn } from "@/lib/utils";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { ExternalLink, LoaderCircle, RotateCcw, Save } from "lucide-react";
-import { type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -39,7 +41,7 @@ type TierBoundaryKey = keyof TierBoundaries;
 
 const KEYWORD_COLLAPSED_LIMIT = 8;
 
-// Four progressive shades of --primary: faintest → full
+// 四级 --primary 渐变色：由浅到深
 const P1 = "color-mix(in oklch, var(--primary) 30%, transparent)";
 const P2 = "color-mix(in oklch, var(--primary) 55%, transparent)";
 const P3 = "color-mix(in oklch, var(--primary) 75%, transparent)";
@@ -62,64 +64,79 @@ interface BoundaryFieldConfig {
 	toColor: string;
 }
 
-const BOUNDARY_FIELDS: BoundaryFieldConfig[] = [
-	{
-		key: "simple_medium",
-		label: "Simple → Medium",
-		description: "Scores at or below this are classified as SIMPLE.",
-		fromTier: "SIMPLE",
-		toTier: "MEDIUM",
-		fromColor: P1,
-		toColor: P2,
-	},
-	{
-		key: "medium_complex",
-		label: "Medium → Complex",
-		description: "Scores above simple_medium and at or below this are MEDIUM.",
-		fromTier: "MEDIUM",
-		toTier: "COMPLEX",
-		fromColor: P2,
-		toColor: P3,
-	},
-	{
-		key: "complex_reasoning",
-		label: "Complex → Reasoning",
-		description: "Scores above this are REASONING. Everything in between is COMPLEX.",
-		fromTier: "COMPLEX",
-		toTier: "REASONING",
-		fromColor: P3,
-		toColor: P4,
-	},
-];
+function getBoundaryFields(t: TFunction): BoundaryFieldConfig[] {
+	return [
+		{
+			key: "simple_medium",
+			label: t("complexityRouter.boundaries.simpleMedium.label"),
+			description: t("complexityRouter.boundaries.simpleMedium.description"),
+			fromTier: "SIMPLE",
+			toTier: "MEDIUM",
+			fromColor: P1,
+			toColor: P2,
+		},
+		{
+			key: "medium_complex",
+			label: t("complexityRouter.boundaries.mediumComplex.label"),
+			description: t("complexityRouter.boundaries.mediumComplex.description"),
+			fromTier: "MEDIUM",
+			toTier: "COMPLEX",
+			fromColor: P2,
+			toColor: P3,
+		},
+		{
+			key: "complex_reasoning",
+			label: t("complexityRouter.boundaries.complexReasoning.label"),
+			description: t("complexityRouter.boundaries.complexReasoning.description"),
+			fromTier: "COMPLEX",
+			toTier: "REASONING",
+			fromColor: P3,
+			toColor: P4,
+		},
+	];
+}
 
-const boundaryField = z.number({ error: "Enter a number between 0 and 1" }).gt(0, "Must be greater than 0").lt(1, "Must be less than 1");
+function createAnalyzerConfigSchema(t: TFunction) {
+	const boundaryField = z
+		.number({ error: t("complexityRouter.validation.numberBetweenZeroAndOne") })
+		.gt(0, t("complexityRouter.validation.greaterThanZero"))
+		.lt(1, t("complexityRouter.validation.lessThanOne"));
 
-const analyzerConfigSchema = z.object({
-	tier_boundaries: z
-		.object({
-			simple_medium: boundaryField,
-			medium_complex: boundaryField,
-			complex_reasoning: boundaryField,
-		})
-		.superRefine((data, ctx) => {
-			if (Number.isFinite(data.medium_complex) && Number.isFinite(data.simple_medium) && data.medium_complex <= data.simple_medium) {
-				ctx.addIssue({ code: "custom", message: "Must be greater than Simple → Medium", path: ["medium_complex"] });
-			}
-			if (
-				Number.isFinite(data.complex_reasoning) &&
-				Number.isFinite(data.medium_complex) &&
-				data.complex_reasoning <= data.medium_complex
-			) {
-				ctx.addIssue({ code: "custom", message: "Must be greater than Medium → Complex", path: ["complex_reasoning"] });
-			}
+	return z.object({
+		tier_boundaries: z
+			.object({
+				simple_medium: boundaryField,
+				medium_complex: boundaryField,
+				complex_reasoning: boundaryField,
+			})
+			.superRefine((data, ctx) => {
+				if (Number.isFinite(data.medium_complex) && Number.isFinite(data.simple_medium) && data.medium_complex <= data.simple_medium) {
+					ctx.addIssue({
+						code: "custom",
+						message: t("complexityRouter.validation.greaterThanSimpleMedium"),
+						path: ["medium_complex"],
+					});
+				}
+				if (
+					Number.isFinite(data.complex_reasoning) &&
+					Number.isFinite(data.medium_complex) &&
+					data.complex_reasoning <= data.medium_complex
+				) {
+					ctx.addIssue({
+						code: "custom",
+						message: t("complexityRouter.validation.greaterThanMediumComplex"),
+						path: ["complex_reasoning"],
+					});
+				}
+			}),
+		keywords: z.object({
+			simple_keywords: z.array(z.string()).min(1, t("complexityRouter.validation.simpleKeywordsRequired")),
+			code_keywords: z.array(z.string()).min(1, t("complexityRouter.validation.codeKeywordsRequired")),
+			technical_keywords: z.array(z.string()).min(1, t("complexityRouter.validation.technicalKeywordsRequired")),
+			reasoning_keywords: z.array(z.string()).min(1, t("complexityRouter.validation.reasoningKeywordsRequired")),
 		}),
-	keywords: z.object({
-		simple_keywords: z.array(z.string()).min(1, "Simple keywords cannot be empty"),
-		code_keywords: z.array(z.string()).min(1, "Code keywords cannot be empty"),
-		technical_keywords: z.array(z.string()).min(1, "Technical keywords cannot be empty"),
-		reasoning_keywords: z.array(z.string()).min(1, "Reasoning keywords cannot be empty"),
-	}),
-});
+	});
+}
 
 const DEFAULT_FORM_VALUES: AnalyzerConfig = {
 	tier_boundaries: { ...DEFAULT_TIER_BOUNDARIES },
@@ -213,7 +230,7 @@ function TierSpectrumBar({ boundaries }: { boundaries: TierBoundaries }) {
 						)}
 					</div>
 				))}
-				{/* Boundary dividers */}
+				{/* 边界分隔线 */}
 				{markers.map(({ key, pos }) => (
 					<div
 						key={key}
@@ -222,7 +239,7 @@ function TierSpectrumBar({ boundaries }: { boundaries: TierBoundaries }) {
 					/>
 				))}
 			</div>
-			{/* Axis labels */}
+			{/* 坐标轴标签 */}
 			<div className="relative h-3.5 w-full">
 				<span className="text-muted-foreground/50 absolute left-0 font-mono text-[9px]">0</span>
 				{markers.map(({ key, pos, value }) => (
@@ -241,6 +258,7 @@ function TierSpectrumBar({ boundaries }: { boundaries: TierBoundaries }) {
 }
 
 export default function ComplexityRouterPage() {
+	const { t } = useTranslation();
 	const canUpdate = useRbac(RbacResource.RoutingRules, RbacOperation.Update);
 	const { data, isLoading, isFetching, error, refetch } = useGetComplexityAnalyzerConfigQuery();
 	const [updateConfig, { isLoading: isSaving }] = useUpdateComplexityAnalyzerConfigMutation();
@@ -248,6 +266,8 @@ export default function ComplexityRouterPage() {
 
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+	const analyzerConfigSchema = useMemo(() => createAnalyzerConfigSchema(t), [t]);
+	const boundaryFields = useMemo(() => getBoundaryFields(t), [t]);
 
 	const {
 		register,
@@ -283,7 +303,7 @@ export default function ComplexityRouterPage() {
 			.unwrap()
 			.then((defaults) => {
 				reset(defaults);
-				toast.success("Reset to defaults", { position: "top-right" });
+				toast.success(t("complexityRouter.toasts.resetToDefaults"), { position: "top-right" });
 			})
 			.catch((err) => {
 				setSubmitError(getErrorMessage(err));
@@ -297,7 +317,7 @@ export default function ComplexityRouterPage() {
 			.unwrap()
 			.then((res) => {
 				reset(res);
-				toast.success("Configuration saved", { position: "top-right" });
+				toast.success(t("complexityRouter.toasts.configurationSaved"), { position: "top-right" });
 			})
 			.catch((err) => {
 				setSubmitError(getErrorMessage(err));
@@ -313,7 +333,7 @@ export default function ComplexityRouterPage() {
 			<div className="mx-auto w-full max-w-7xl space-y-4 px-14 pt-8">
 				<p className="text-destructive font-mono text-sm">{getErrorMessage(error)}</p>
 				<Button data-testid="complexity-router-fetch-retry-button" type="button" variant="outline" size="sm" onClick={() => refetch()}>
-					Retry
+					{t("common.actions.retry")}
 				</Button>
 			</div>
 		);
@@ -322,9 +342,9 @@ export default function ComplexityRouterPage() {
 	if (!data) {
 		return (
 			<div className="mx-auto w-full max-w-7xl space-y-4 px-14 pt-8">
-				<p className="text-muted-foreground font-mono text-sm">No complexity router configuration is available.</p>
+				<p className="text-muted-foreground font-mono text-sm">{t("complexityRouter.empty.noConfiguration")}</p>
 				<Button data-testid="complexity-router-fetch-retry-button" type="button" variant="outline" size="sm" onClick={() => refetch()}>
-					Retry
+					{t("common.actions.retry")}
 				</Button>
 			</div>
 		);
@@ -337,28 +357,30 @@ export default function ComplexityRouterPage() {
 	return (
 		<ScrollArea className="no-padding-parent h-[calc(100vh_-_16px)] w-full px-14 pt-4">
 			<form className="mx-auto w-full max-w-7xl space-y-8" onSubmit={handleSubmit(onValid)} noValidate>
-				{/* ── Page header ── */}
+				{/* 页面标题 */}
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 					<div className="space-y-1.5">
-						<h1 className="text-2xl font-semibold tracking-tight">Complexity Router</h1>
+						<h1 className="text-2xl font-semibold tracking-tight">{t("complexityRouter.title")}</h1>
 						<p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-							Tune how incoming requests are classified into four tiers. Thresholds and keyword lists feed the{" "}
-							<code className="bg-muted rounded-sm px-1 py-0.5 font-mono text-xs">complexity_tier</code> field that routing rules can
-							target.
+							{t("complexityRouter.descriptionStart")}{" "}
+							<code className="bg-muted rounded-sm px-1 py-0.5 font-mono text-xs">complexity_tier</code>{" "}
+							{t("complexityRouter.descriptionEnd")}
 						</p>
 					</div>
 					<Button asChild variant="outline" size="sm" className="w-fit shrink-0" data-testid="complexity-router-docs-link">
 						<a href={"https://docs.getbifrost.ai/features/governance/complexity-router"} target="_blank" rel="noopener noreferrer">
 							<ExternalLink className="size-3.5" />
-							Docs
+							{t("common.externalLinks.docs")}
 						</a>
 					</Button>
 				</div>
 
-				{/* ── Complexity Spectrum ── */}
+				{/* 复杂度谱系 */}
 				<div className="bg-card space-y-4 rounded-sm border p-5">
 					<div className="flex items-center justify-between">
-						<p className="text-muted-foreground font-mono text-xs font-semibold tracking-widest uppercase">Complexity Spectrum</p>
+						<p className="text-muted-foreground font-mono text-xs font-semibold tracking-widest uppercase">
+							{t("complexityRouter.spectrum")}
+						</p>
 						<div className="flex items-center gap-4">
 							{Object.values(TIER_PALETTE).map(({ color, name }) => (
 								<div key={name} className="flex items-center gap-1.5">
@@ -371,28 +393,28 @@ export default function ComplexityRouterPage() {
 					<TierSpectrumBar boundaries={liveBoundaries} />
 				</div>
 
-				{/* ── Tier Boundaries ── */}
+				{/* 层级边界 */}
 				<div className="space-y-3">
-					<h2 className="text-sm font-semibold">Tier Boundaries</h2>
+					<h2 className="text-sm font-semibold">{t("complexityRouter.sections.tierBoundaries")}</h2>
 
 					<div className="grid gap-3 md:grid-cols-3">
-						{BOUNDARY_FIELDS.map(({ key, label, description, fromTier, toTier, fromColor, toColor }) => {
+						{boundaryFields.map(({ key, label, description, fromTier, toTier, fromColor, toColor }) => {
 							const fieldError = boundaryErrors?.[key];
 							const inputId = `boundary-${key}`;
 							const errorId = `${inputId}-error`;
 							const { onChange, ...boundaryInputProps } = register(`tier_boundaries.${key}`, {
-								required: "Enter a number between 0 and 1",
+								required: t("complexityRouter.validation.numberBetweenZeroAndOne"),
 								setValueAs: boundaryValueAsNumber,
 								validate: (value) => {
-									if (!Number.isFinite(value)) return "Enter a number between 0 and 1";
-									if (value <= 0) return "Must be greater than 0";
-									if (value >= 1) return "Must be less than 1";
+									if (!Number.isFinite(value)) return t("complexityRouter.validation.numberBetweenZeroAndOne");
+									if (value <= 0) return t("complexityRouter.validation.greaterThanZero");
+									if (value >= 1) return t("complexityRouter.validation.lessThanOne");
 									const { simple_medium, medium_complex } = liveBoundaries;
 									if (key === "medium_complex" && Number.isFinite(simple_medium) && value <= simple_medium) {
-										return "Must be greater than Simple → Medium";
+										return t("complexityRouter.validation.greaterThanSimpleMedium");
 									}
 									if (key === "complex_reasoning" && Number.isFinite(medium_complex) && value <= medium_complex) {
-										return "Must be greater than Medium → Complex";
+										return t("complexityRouter.validation.greaterThanMediumComplex");
 									}
 									return true;
 								},
@@ -406,7 +428,7 @@ export default function ComplexityRouterPage() {
 
 							return (
 								<div key={key} className="bg-card relative space-y-3 overflow-hidden rounded-sm border p-4">
-									{/* Tier transition label */}
+									{/* 层级过渡标签 */}
 									<div className="flex items-center gap-1.5 pt-0.5">
 										<span className="font-mono text-[10px] font-bold tracking-widest" style={{ color: fromColor }}>
 											{fromTier}
@@ -457,31 +479,31 @@ export default function ComplexityRouterPage() {
 					</div>
 				</div>
 
-				{/* ── Keyword Lists ── */}
+				{/* 关键词列表 */}
 				<div className="space-y-3">
 					<div className="flex items-baseline gap-2.5">
-						<h2 className="text-sm font-semibold">Keyword Lists</h2>
-						<span className="text-muted-foreground text-xs">
-							Lowercased and deduplicated on save. Each list requires at least one entry.
-						</span>
+						<h2 className="text-sm font-semibold">{t("complexityRouter.sections.keywordLists")}</h2>
+						<span className="text-muted-foreground text-xs">{t("complexityRouter.keywordListsHelp")}</span>
 					</div>
 
 					<div className="grid gap-3 md:grid-cols-2">
-						{KEYWORD_LIST_DEFINITIONS.map(({ key, label, description }) => {
+						{KEYWORD_LIST_DEFINITIONS.map(({ key }) => {
 							const fieldError = keywordErrors?.[key as KeywordListKey];
 							const errorId = `keywords-${key}-error`;
+							const label = t(`complexityRouter.keywords.${key}.label`);
+							const description = t(`complexityRouter.keywords.${key}.description`);
 							return (
 								<div key={key} className="bg-card relative overflow-hidden rounded-sm border">
 									<Controller
 										control={control}
 										name={`keywords.${key}` as const}
-										rules={{ validate: (value) => (value.length > 0 ? true : `${label} cannot be empty`) }}
+										rules={{ validate: (value) => (value.length > 0 ? true : t("complexityRouter.validation.keywordRequired", { label })) }}
 										render={({ field }) => (
 											<div className="space-y-2 p-4 pl-5">
 												<div className="flex items-center justify-between">
 													<span className="text-xs font-medium">{label}</span>
 													<span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-														{field.value.length} {field.value.length === 1 ? "entry" : "entries"}
+														{t("complexityRouter.units.entries", { count: field.value.length })}
 													</span>
 												</div>
 												<p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
@@ -491,7 +513,7 @@ export default function ComplexityRouterPage() {
 													onValueChange={field.onChange}
 													collapsedTagLimit={KEYWORD_COLLAPSED_LIMIT}
 													expandButtonTestId={`complexity-router-keywords-${testIdPart(key)}-expand-button`}
-													placeholder="Type a keyword and press Enter"
+													placeholder={t("complexityRouter.placeholders.keyword")}
 													aria-invalid={fieldError ? true : undefined}
 													aria-describedby={fieldError ? errorId : undefined}
 													className={cn(fieldError && "border-destructive")}
@@ -510,7 +532,7 @@ export default function ComplexityRouterPage() {
 					</div>
 				</div>
 
-				{/* ── Submit error ── */}
+				{/* 提交错误 */}
 				{submitError && (
 					<div
 						role="alert"
@@ -520,8 +542,8 @@ export default function ComplexityRouterPage() {
 					</div>
 				)}
 
-				{/* ── Action footer ── */}
-				<div className="bg-card sticky bottom-0 flex flex-wrap items-center justify-end gap-2.5 border-t py-4 z-10">
+				{/* 操作区 */}
+				<div className="bg-card sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2.5 border-t py-4">
 					<Button
 						data-testid="complexity-router-restore-defaults-button"
 						type="button"
@@ -531,7 +553,7 @@ export default function ComplexityRouterPage() {
 						disabled={!canUpdate || isSaving || isResetting}
 					>
 						{isResetting ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-						Restore defaults
+						{t("complexityRouter.actions.restoreDefaults")}
 					</Button>
 					<Button
 						data-testid="complexity-router-discard-changes-button"
@@ -541,7 +563,7 @@ export default function ComplexityRouterPage() {
 						onClick={handleDiscard}
 						disabled={!isDirty || isSaving || isResetting || isFetching}
 					>
-						Discard changes
+						{t("complexityRouter.actions.discardChanges")}
 					</Button>
 					<Button
 						data-testid="complexity-router-save-changes-button"
@@ -550,7 +572,7 @@ export default function ComplexityRouterPage() {
 						disabled={!canUpdate || !isDirty || isSaving || isResetting || (isSubmitted && hasErrors)}
 					>
 						{isSaving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-						{isSaving ? "Saving…" : "Save changes"}
+						{isSaving ? t("common.actions.saving") : t("common.actions.saveChanges")}
 					</Button>
 				</div>
 			</form>
@@ -558,11 +580,8 @@ export default function ComplexityRouterPage() {
 			<AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Restore defaults</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will reset all tier boundaries and keyword lists to the factory defaults. Your current configuration will be lost. This
-							action cannot be undone.
-						</AlertDialogDescription>
+						<AlertDialogTitle>{t("complexityRouter.dialogs.restoreTitle")}</AlertDialogTitle>
+						<AlertDialogDescription>{t("complexityRouter.dialogs.restoreDescription")}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel
@@ -570,7 +589,7 @@ export default function ComplexityRouterPage() {
 							onClick={() => setRestoreDialogOpen(false)}
 							disabled={isResetting}
 						>
-							Cancel
+							{t("common.actions.cancel")}
 						</AlertDialogCancel>
 						<AlertDialogAction
 							data-testid="complexity-router-restore-confirm-button"
@@ -580,7 +599,7 @@ export default function ComplexityRouterPage() {
 							}}
 							disabled={!canUpdate || isResetting}
 						>
-							Restore defaults
+							{t("complexityRouter.actions.restoreDefaults")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

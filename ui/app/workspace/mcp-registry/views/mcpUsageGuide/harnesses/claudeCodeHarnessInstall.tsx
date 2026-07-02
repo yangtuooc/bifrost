@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { buildClaudeCodeCommand } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { ClaudeScope, HarnessInstallProps } from "../types";
@@ -12,6 +13,7 @@ export function ClaudeCodeHarnessInstall({
 	serverScope,
 	virtualKey,
 }: HarnessInstallProps) {
+	const { t } = useTranslation();
 	const [scope, setScope] = useState<ClaudeScope>("local");
 
 	const command = useMemo(() => {
@@ -34,16 +36,20 @@ export function ClaudeCodeHarnessInstall({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="local">Local</SelectItem>
-						<SelectItem value="project">Project</SelectItem>
-						<SelectItem value="user">User</SelectItem>
+						<SelectItem value="local">{t("mcpRegistry.usageGuide.scopes.local")}</SelectItem>
+						<SelectItem value="project">{t("mcpRegistry.usageGuide.scopes.project")}</SelectItem>
+						<SelectItem value="user">{t("mcpRegistry.usageGuide.scopes.user")}</SelectItem>
 					</SelectContent>
 				</Select>
 			}
-			emptyMessage={virtualKey ? "Select servers or use Gateway root." : "Select a virtual key to generate the command."}
+			emptyMessage={
+				virtualKey
+					? t("mcpRegistry.usageGuide.command.selectServersOrGateway")
+					: t("mcpRegistry.usageGuide.command.selectVirtualKeyForCommand")
+			}
 			harnessName="Claude Code"
 			logoSrc="/images/harness/claudecode.svg"
-			registrationLabel={getRegistrationLabel(serverScope, selectedServers)}
+			registrationLabel={getRegistrationLabel(serverScope, selectedServers, t)}
 		/>
 	);
 }

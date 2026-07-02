@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
+import type { TFunction } from "i18next";
 
 import type { LogEntry } from "@/lib/types/logs";
 
 import { getMessage } from "./columns";
+
+const testT = ((key: string) => {
+	const labels: Record<string, string> = {
+		"logs.details.roles.tool": "Tool Result",
+		"logs.details.roles.user": "User",
+		"logs.details.roles.assistant": "Assistant",
+		"logs.details.roles.assistantToolCall": "Assistant Tool Call",
+		"logs.details.media.audioFile": "Audio file",
+		"logs.details.media.imageFile": "Image file",
+	};
+	return labels[key] ?? key;
+}) as TFunction;
 
 describe("getMessage", () => {
 	it("returns EI realtime text from input history", () => {
@@ -16,7 +29,7 @@ describe("getMessage", () => {
 			],
 		} as unknown as LogEntry;
 
-		expect(getMessage(log)).toBe("User: hello from the browser");
+		expect(getMessage(log, testT)).toBe("User: hello from the browser");
 	});
 
 	it("returns LM realtime text from output message", () => {
@@ -30,7 +43,7 @@ describe("getMessage", () => {
 			},
 		} as unknown as LogEntry;
 
-		expect(getMessage(log)).toBe("Assistant: hello from the model");
+		expect(getMessage(log, testT)).toBe("Assistant: hello from the model");
 	});
 
 	it("returns split realtime text when both user and assistant are present", () => {
@@ -48,7 +61,7 @@ describe("getMessage", () => {
 			},
 		} as unknown as LogEntry;
 
-		expect(getMessage(log)).toBe("User: who are you?\nAssistant: I am the assistant.");
+		expect(getMessage(log, testT)).toBe("User: who are you?\nAssistant: I am the assistant.");
 	});
 
 	it("returns split realtime text including tool output", () => {
@@ -70,7 +83,7 @@ describe("getMessage", () => {
 			},
 		} as unknown as LogEntry;
 
-		expect(getMessage(log)).toBe('Tool Result: {"nextResponse":"tool result"}\nUser: who are you?\nAssistant: I am the assistant.');
+		expect(getMessage(log, testT)).toBe('Tool Result: {"nextResponse":"tool result"}\nUser: who are you?\nAssistant: I am the assistant.');
 	});
 
 	it("returns realtime assistant tool calls from output message", () => {
@@ -95,6 +108,6 @@ describe("getMessage", () => {
 			},
 		} as unknown as LogEntry;
 
-		expect(getMessage(log)).toBe('User: show me a pastel palette\nAssistant Tool Call: display_color_palette({"theme":"pastel"})');
+		expect(getMessage(log, testT)).toBe('User: show me a pastel palette\nAssistant Tool Call: display_color_palette({"theme":"pastel"})');
 	});
 });

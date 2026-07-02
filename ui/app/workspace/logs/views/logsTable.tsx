@@ -16,6 +16,7 @@ import type { ColumnOrderState, ColumnPinningState, VisibilityState } from "@tan
 import { ColumnDef, flexRender, getCoreRowModel, SortingState, useReactTable } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface DataTableProps {
 	columns: ColumnDef<LogEntry>[];
@@ -27,7 +28,7 @@ interface DataTableProps {
 	polling: boolean;
 	loading?: boolean;
 	onRefresh: () => void;
-	/** Column config — computed by the parent via useColumnConfig */
+	/** 列配置，由父组件通过 useColumnConfig 计算。 */
 	columnEntries: ColumnConfigEntry[];
 	columnOrder: ColumnOrderState;
 	columnVisibility: VisibilityState;
@@ -55,17 +56,18 @@ export function LogsDataTable({
 	onTogglePin,
 	onReorderColumns,
 }: DataTableProps) {
+	const { t } = useTranslation();
 	const [sorting, setSorting] = useState<SortingState>([{ id: pagination.sort_by, desc: pagination.order === "desc" }]);
 	const tableContainerRef = useRef<HTMLDivElement>(null);
 	const calculatedPageSize = useTablePageSize(tableContainerRef);
 
 	const fixedColumnIds = useMemo(() => new Set<string>(["actions"]), []);
 
-	// Measure actual header cell widths for pixel-perfect pin offsets
+	// 测量实际表头宽度，用于计算精确的 pinned 偏移。
 	const { headerCellRefs, setHeaderCellRef } = useHeaderCellRefs();
 	const pinOffsets = usePinOffsets(headerCellRefs, columnPinning);
 
-	// Shadow on the edge of pinned groups
+	// 在 pinned 列组边缘展示阴影。
 	const lastLeftPinId = columnPinning.left?.at(-1);
 	const firstRightPinId = columnPinning.right?.at(0);
 
@@ -235,7 +237,7 @@ export function LogsDataTable({
 						) : loading ? null : (
 							<TableRow>
 								<TableCell colSpan={columns.length} className="h-24 text-center">
-									No results found. Try adjusting your filters and/or time range.
+									{t("logs.table.noResults")}
 								</TableCell>
 							</TableRow>
 						)}
@@ -243,10 +245,14 @@ export function LogsDataTable({
 				</Table>
 			</div>
 
-			{/* Pagination Footer */}
+			{/* 分页底栏 */}
 			<div className="flex shrink-0 items-center justify-between text-xs" data-testid="pagination">
 				<div className="text-muted-foreground flex items-center gap-2">
-					{startItem.toLocaleString()}-{endItem.toLocaleString()} of {totalItems.toLocaleString()} entries
+					{t("common.pagination.entriesRange", {
+						start: startItem.toLocaleString(),
+						end: endItem.toLocaleString(),
+						total: totalItems.toLocaleString(),
+					})}
 				</div>
 
 				<div className="flex items-center gap-2">
@@ -256,15 +262,15 @@ export function LogsDataTable({
 						onClick={() => goToPage(currentPage - 1)}
 						disabled={currentPage <= 1}
 						data-testid="prev-page"
-						aria-label="Previous page"
+						aria-label={t("common.pagination.previousPage")}
 					>
 						<ChevronLeft className="size-3" />
 					</Button>
 
 					<div className="flex items-center gap-1">
-						<span>Page</span>
+						<span>{t("common.pagination.page")}</span>
 						<span>{currentPage}</span>
-						<span>of {totalPages}</span>
+						<span>{t("common.pagination.of", { total: totalPages })}</span>
 					</div>
 
 					<Button
@@ -273,7 +279,7 @@ export function LogsDataTable({
 						onClick={() => goToPage(currentPage + 1)}
 						disabled={totalPages === 0 || currentPage >= totalPages}
 						data-testid="next-page"
-						aria-label="Next page"
+						aria-label={t("common.pagination.nextPage")}
 					>
 						<ChevronRight className="size-3" />
 					</Button>

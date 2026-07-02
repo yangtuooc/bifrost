@@ -88,23 +88,28 @@ const newBadgeClassName =
 	"relative overflow-hidden after:pointer-events-none after:absolute after:inset-y-0 after:-left-full after:w-full after:skew-x-[-18deg] after:bg-gradient-to-r after:from-transparent after:via-primary/25 after:to-transparent after:opacity-0 after:content-[''] after:animate-[sidebar-new-badge-shine_1200ms_cubic-bezier(0.22,1,0.36,1)_260ms_both]";
 
 // Custom MCP Icon Component
-const MCPIcon = ({ className }: { className?: string }) => (
-	<svg
-		className={className}
-		fill="currentColor"
-		fillRule="evenodd"
-		height="1em"
-		style={{ flex: "none", lineHeight: 1 }}
-		viewBox="0 0 24 24"
-		width="1em"
-		xmlns="http://www.w3.org/2000/svg"
-		aria-label="MCP clients icon"
-	>
-		<title>MCP clients icon</title>
-		<path d="M15.688 2.343a2.588 2.588 0 00-3.61 0l-9.626 9.44a.863.863 0 01-1.203 0 .823.823 0 010-1.18l9.626-9.44a4.313 4.313 0 016.016 0 4.116 4.116 0 011.204 3.54 4.3 4.3 0 013.609 1.18l.05.05a4.115 4.115 0 010 5.9l-8.706 8.537a.274.274 0 000 .393l1.788 1.754a.823.823 0 010 1.18.863.863 0 01-1.203 0l-1.788-1.753a1.92 1.92 0 010-2.754l8.706-8.538a2.47 2.47 0 000-3.54l-.05-.049a2.588 2.588 0 00-3.607-.003l-7.172 7.034-.002.002-.098.097a.863.863 0 01-1.204 0 .823.823 0 010-1.18l7.273-7.133a2.47 2.47 0 00-.003-3.537z" />
-		<path d="M14.485 4.703a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a4.115 4.115 0 000 5.9 4.314 4.314 0 006.016 0l7.12-6.982a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a2.588 2.588 0 01-3.61 0 2.47 2.47 0 010-3.54l7.12-6.982z" />
-	</svg>
-);
+const MCPIcon = ({ className }: { className?: string }) => {
+	const { t } = useTranslation();
+	const label = t("sidebar.icons.mcpClients");
+
+	return (
+		<svg
+			className={className}
+			fill="currentColor"
+			fillRule="evenodd"
+			height="1em"
+			style={{ flex: "none", lineHeight: 1 }}
+			viewBox="0 0 24 24"
+			width="1em"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-label={label}
+		>
+			<title>{label}</title>
+			<path d="M15.688 2.343a2.588 2.588 0 00-3.61 0l-9.626 9.44a.863.863 0 01-1.203 0 .823.823 0 010-1.18l9.626-9.44a4.313 4.313 0 016.016 0 4.116 4.116 0 011.204 3.54 4.3 4.3 0 013.609 1.18l.05.05a4.115 4.115 0 010 5.9l-8.706 8.537a.274.274 0 000 .393l1.788 1.754a.823.823 0 010 1.18.863.863 0 01-1.203 0l-1.788-1.753a1.92 1.92 0 010-2.754l8.706-8.538a2.47 2.47 0 000-3.54l-.05-.049a2.588 2.588 0 00-3.607-.003l-7.172 7.034-.002.002-.098.097a.863.863 0 01-1.204 0 .823.823 0 010-1.18l7.273-7.133a2.47 2.47 0 00-.003-3.537z" />
+			<path d="M14.485 4.703a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a4.115 4.115 0 000 5.9 4.314 4.314 0 006.016 0l7.12-6.982a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a2.588 2.588 0 01-3.61 0 2.47 2.47 0 010-3.54l7.12-6.982z" />
+		</svg>
+	);
+};
 
 // Main navigation items
 
@@ -570,7 +575,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.observability"),
 				url: "/workspace/logs",
 				icon: Telescope,
-				description: "Request logs & monitoring",
+				description: t("sidebar.descriptions.observability"),
 				hasAccess: hasLogsAccess,
 				subItems: [
 					{
@@ -578,7 +583,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.dashboard"),
 						url: "/workspace/dashboard",
 						icon: ChartColumnBig,
-						description: "Dashboard",
+						description: t("sidebar.descriptions.dashboard"),
 						hasAccess: hasDashboardAccess,
 					},
 					{
@@ -586,7 +591,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.llmLogs"),
 						url: "/workspace/logs",
 						icon: Logs,
-						description: "LLM request logs & monitoring",
+						description: t("sidebar.descriptions.llmLogs"),
 						hasAccess: hasLogsAccess,
 					},
 					{
@@ -594,7 +599,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.mcpLogs"),
 						url: "/workspace/mcp-logs",
 						icon: MCPIcon,
-						description: "MCP tool execution logs",
+						description: t("sidebar.descriptions.mcpLogs"),
 						hasAccess: hasMCPLogsAccess,
 					},
 					{
@@ -602,7 +607,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.connectors"),
 						url: "/workspace/observability",
 						icon: ChevronsLeftRightEllipsis,
-						description: "Log connectors",
+						description: t("sidebar.descriptions.connectors"),
 						hasAccess: hasObservabilityAccess,
 					},
 					{
@@ -610,7 +615,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.logsSettings"),
 						url: "/workspace/config/logging",
 						icon: Settings,
-						description: "Logs configuration",
+						description: t("sidebar.descriptions.logsSettings"),
 						hasAccess: hasSettingsAccess,
 					},
 				],
@@ -620,7 +625,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.models"),
 				url: "/workspace/providers",
 				icon: BoxIcon,
-				description: "Configure models",
+				description: t("sidebar.descriptions.models"),
 				hasAccess: true,
 				subItems: [
 					{
@@ -628,7 +633,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.modelCatalog"),
 						url: "/workspace/model-catalog",
 						icon: LayoutGrid,
-						description: "Overview of providers, keys, and usage",
+						description: t("sidebar.descriptions.modelCatalog"),
 						hasAccess: hasModelProvidersAccess,
 					},
 					{
@@ -636,7 +641,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.modelProviders"),
 						url: "/workspace/providers",
 						icon: Boxes,
-						description: "Configure models",
+						description: t("sidebar.descriptions.modelProviders"),
 						hasAccess: hasModelProvidersAccess,
 					},
 					{
@@ -644,7 +649,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.budgetsLimits"),
 						url: "/workspace/model-limits",
 						icon: Wallet,
-						description: "Model limits",
+						description: t("sidebar.descriptions.budgetsLimits"),
 						hasAccess: hasGovernanceLegacyAccess,
 					},
 					{
@@ -652,7 +657,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.routingRules"),
 						url: "/workspace/routing-rules",
 						icon: Network,
-						description: "Intelligent routing rules",
+						description: t("sidebar.descriptions.routingRules"),
 						hasAccess: hasRoutingRulesAccess,
 					},
 					{
@@ -660,7 +665,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.complexityRouter"),
 						url: "/workspace/complexity-router",
 						icon: GitCompareArrows,
-						description: "Complexity tier routing",
+						description: t("sidebar.descriptions.complexityRouter"),
 						hasAccess: hasRoutingRulesAccess,
 					},
 					{
@@ -668,7 +673,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.circuitBreaker"),
 						url: "/workspace/circuit-breaker",
 						icon: CircuitBoard,
-						description: "Automatic fallback when primary endpoints fail",
+						description: t("sidebar.descriptions.circuitBreaker"),
 						hasAccess: hasCircuitBreakerAccess,
 					},
 					{
@@ -676,7 +681,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.pricingOverrides"),
 						url: "/workspace/custom-pricing/overrides",
 						icon: SlidersHorizontal,
-						description: "Scoped pricing overrides",
+						description: t("sidebar.descriptions.pricingOverrides"),
 						hasAccess: hasSettingsAccess,
 					},
 					{
@@ -684,7 +689,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.modelSettings"),
 						url: "/workspace/custom-pricing",
 						icon: Settings,
-						description: "Model and routing configuration",
+						description: t("sidebar.descriptions.modelSettings"),
 						hasAccess: hasSettingsAccess,
 					},
 				],
@@ -693,7 +698,7 @@ export default function AppSidebar() {
 				id: "mcp-gateway",
 				title: t("sidebar.nav.mcpGateway"),
 				icon: MCPIcon,
-				description: "MCP configuration",
+				description: t("sidebar.descriptions.mcpGateway"),
 				url: "/workspace/mcp-gateway",
 				hasAccess: hasMCPGatewayAccess || hasMCPToolGroupsAccess,
 				subItems: [
@@ -702,7 +707,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.mcpCatalog"),
 						url: "/workspace/mcp-registry",
 						icon: LayoutGrid,
-						description: "MCP tool catalog",
+						description: t("sidebar.descriptions.mcpCatalog"),
 						hasAccess: hasMCPGatewayAccess,
 					},
 					{
@@ -710,7 +715,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.mcpLibrary"),
 						url: "/workspace/mcp-registry/library",
 						icon: Boxes,
-						description: "Install curated MCP servers",
+						description: t("sidebar.descriptions.mcpLibrary"),
 						hasAccess: hasMCPGatewayAccess,
 					},
 					{
@@ -718,7 +723,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.toolGroups"),
 						url: "/workspace/mcp-tool-groups",
 						icon: ToolCase,
-						description: "Tool Groups",
+						description: t("sidebar.descriptions.toolGroups"),
 						hasAccess: hasMCPToolGroupsAccess,
 					},
 					{
@@ -726,7 +731,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.authSessions"),
 						url: "/workspace/mcp-sessions",
 						icon: KeyRound,
-						description: "Per-user OAuth sessions",
+						description: t("sidebar.descriptions.authSessions"),
 						hasAccess: hasMCPGatewayAccess,
 					},
 					{
@@ -734,7 +739,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.oauthGrants"),
 						url: "/workspace/oauth-grants",
 						icon: ShieldCheck,
-						description: "Downstream OAuth grants",
+						description: t("sidebar.descriptions.oauthGrants"),
 						hasAccess: hasMCPGatewayAccess,
 					},
 					{
@@ -742,7 +747,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.mcpSettings"),
 						url: "/workspace/mcp-settings",
 						icon: Settings,
-						description: "MCP configuration",
+						description: t("sidebar.descriptions.mcpSettings"),
 						hasAccess: hasMCPGatewayAccess,
 					},
 				],
@@ -752,7 +757,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.plugins"),
 				url: "/workspace/plugins",
 				icon: Puzzle,
-				description: "Manage custom plugins",
+				description: t("sidebar.descriptions.plugins"),
 				hasAccess: hasPluginsAccess,
 			},
 			{
@@ -760,7 +765,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.governance"),
 				url: "/workspace/governance",
 				icon: Landmark,
-				description: "Virtual keys, users, teams, customers & roles",
+				description: t("sidebar.descriptions.governance"),
 				hasAccess: hasAnyGovernanceAccess,
 				subItems: [
 					{
@@ -768,7 +773,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.virtualKeys"),
 						url: "/workspace/governance/virtual-keys",
 						icon: KeyRound,
-						description: "Manage virtual keys & access",
+						description: t("sidebar.descriptions.virtualKeys"),
 						hasAccess: hasVirtualKeysAccess,
 					},
 					{
@@ -776,7 +781,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.users"),
 						url: "/workspace/governance/users",
 						icon: Users,
-						description: "Manage users",
+						description: t("sidebar.descriptions.users"),
 						hasAccess: hasUsersAccess,
 					},
 					{
@@ -784,7 +789,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.teams"),
 						url: "/workspace/governance/teams",
 						icon: Building,
-						description: "Manage teams",
+						description: t("sidebar.descriptions.teams"),
 						hasAccess: hasTeamsAccess,
 					},
 					{
@@ -792,7 +797,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.businessUnits"),
 						url: "/workspace/governance/business-units",
 						icon: Building2,
-						description: "Manage business units",
+						description: t("sidebar.descriptions.businessUnits"),
 						hasAccess: hasBusinessUnitsAccess,
 					},
 					{
@@ -800,7 +805,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.customers"),
 						url: "/workspace/governance/customers",
 						icon: WalletCards,
-						description: "Manage customers",
+						description: t("sidebar.descriptions.customers"),
 						hasAccess: hasCustomersAccess,
 					},
 					{
@@ -808,7 +813,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.userProvisioning"),
 						url: "/workspace/scim",
 						icon: BookUser,
-						description: "User management and provisioning",
+						description: t("sidebar.descriptions.userProvisioning"),
 						hasAccess: hasUserProvisioningAccess,
 					},
 					{
@@ -816,7 +821,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.rolesPermissions"),
 						url: "/workspace/governance/rbac",
 						icon: UserRoundCheck,
-						description: "User roles and permissions",
+						description: t("sidebar.descriptions.rolesPermissions"),
 						hasAccess: hasRbacAccess,
 					},
 					{
@@ -824,7 +829,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.accessProfiles"),
 						url: "/workspace/governance/access-profiles",
 						icon: ShieldCheck,
-						description: "Manage access profiles for roles",
+						description: t("sidebar.descriptions.accessProfiles"),
 						hasAccess: hasAccessProfilesAccess,
 					},
 					{
@@ -832,7 +837,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.auditLogs"),
 						url: "/workspace/audit-logs",
 						icon: ScrollText,
-						description: "Audit logs and compliance",
+						description: t("sidebar.descriptions.auditLogs"),
 						hasAccess: hasAuditLogsAccess,
 					},
 				],
@@ -842,7 +847,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.guardrails"),
 				url: "/workspace/guardrails",
 				icon: Construction,
-				description: "Guardrails configuration",
+				description: t("sidebar.descriptions.guardrails"),
 				hasAccess: hasGuardrailsConfigAccess || hasGuardrailsProvidersAccess,
 				subItems: [
 					{
@@ -850,7 +855,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.rules"),
 						url: "/workspace/guardrails/configuration",
 						icon: SearchCheck,
-						description: "Guardrail rules",
+						description: t("sidebar.descriptions.rules"),
 						hasAccess: hasGuardrailsConfigAccess,
 					},
 					{
@@ -858,7 +863,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.providers"),
 						url: "/workspace/guardrails/providers",
 						icon: Boxes,
-						description: "Guardrail providers configuration",
+						description: t("sidebar.descriptions.providers"),
 						hasAccess: hasGuardrailsProvidersAccess,
 					},
 				],
@@ -868,7 +873,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.clusterConfig"),
 				url: "/workspace/cluster",
 				icon: Network,
-				description: "Manage Bifrost cluster",
+				description: t("sidebar.descriptions.clusterConfig"),
 				hasAccess: hasClusterConfigAccess,
 			},
 			{
@@ -876,7 +881,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.adaptiveRouting"),
 				url: "/workspace/adaptive-routing",
 				icon: Shuffle,
-				description: "Manage adaptive routing",
+				description: t("sidebar.descriptions.adaptiveRouting"),
 				hasAccess: isAdaptiveRoutingAllowed,
 				subItems: [
 					{
@@ -884,7 +889,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.dashboard"),
 						url: "/workspace/adaptive-routing",
 						icon: ChartColumnBig,
-						description: "Adaptive routing metrics",
+						description: t("sidebar.descriptions.adaptiveRoutingDashboard"),
 						hasAccess: isAdaptiveRoutingAllowed,
 					},
 					{
@@ -892,7 +897,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.settings"),
 						url: "/workspace/adaptive-routing/settings",
 						icon: Settings,
-						description: "Adaptive routing settings",
+						description: t("sidebar.descriptions.adaptiveRoutingSettings"),
 						hasAccess: isAdaptiveRoutingAllowed,
 					},
 				],
@@ -904,7 +909,7 @@ export default function AppSidebar() {
 							title: t("sidebar.nav.promptRepository"),
 							url: "/workspace/prompt-repo",
 							icon: FolderGit,
-							description: "Prompt repository",
+							description: t("sidebar.descriptions.promptRepository"),
 							hasAccess: hasPromptRepositoryAccess,
 						},
 						{
@@ -912,7 +917,7 @@ export default function AppSidebar() {
 							title: t("sidebar.nav.skillsRepository"),
 							url: "/workspace/skills-repo",
 							icon: BookOpenText,
-							description: "Skills repository",
+							description: t("sidebar.descriptions.skillsRepository"),
 							hasAccess: hasSkillsRepositoryAccess,
 						},
 					]
@@ -923,7 +928,7 @@ export default function AppSidebar() {
 				url: "https://www.getmaxim.ai",
 				icon: FlaskConical,
 				isExternal: true,
-				description: "Evaluations",
+				description: t("sidebar.descriptions.evals"),
 				hasAccess: true,
 			},
 			{
@@ -931,7 +936,7 @@ export default function AppSidebar() {
 				title: t("sidebar.nav.settings"),
 				url: "/workspace/config",
 				icon: Settings2Icon,
-				description: "Bifrost settings",
+				description: t("sidebar.descriptions.settings"),
 				hasAccess: hasSettingsAccess || hasAuditLogsAccess || hasUserProvisioningAccess,
 				subItems: [
 					{
@@ -939,7 +944,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.clientSettings"),
 						url: "/workspace/config/client-settings",
 						icon: Settings,
-						description: "Client configuration settings",
+						description: t("sidebar.descriptions.clientSettings"),
 						hasAccess: hasSettingsAccess,
 					},
 					{
@@ -947,7 +952,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.compatibility"),
 						url: "/workspace/config/compatibility",
 						icon: Plug,
-						description: "Compatibility conversion settings",
+						description: t("sidebar.descriptions.compatibility"),
 						hasAccess: hasSettingsAccess,
 					},
 					{
@@ -955,7 +960,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.caching"),
 						url: "/workspace/config/caching",
 						icon: DatabaseZap,
-						description: "Caching configuration",
+						description: t("sidebar.descriptions.caching"),
 						hasAccess: hasSettingsAccess,
 					},
 					{
@@ -963,7 +968,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.security"),
 						url: "/workspace/config/security",
 						icon: ShieldCheck,
-						description: "Security settings",
+						description: t("sidebar.descriptions.security"),
 						hasAccess: hasSettingsAccess,
 					},
 					...(IS_ENTERPRISE
@@ -973,7 +978,7 @@ export default function AppSidebar() {
 									title: t("sidebar.nav.proxy"),
 									url: "/workspace/config/proxy",
 									icon: Globe,
-									description: "Proxy configuration",
+									description: t("sidebar.descriptions.proxy"),
 									hasAccess: hasSettingsAccess,
 								},
 							]
@@ -983,7 +988,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.apiKeys"),
 						url: "/workspace/config/api-keys",
 						icon: KeyRound,
-						description: "API keys management",
+						description: t("sidebar.descriptions.apiKeys"),
 						hasAccess: hasAPIKeyAccess,
 					},
 					{
@@ -991,7 +996,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.performanceTuning"),
 						url: "/workspace/config/performance-tuning",
 						icon: TrendingUp,
-						description: "Performance tuning settings",
+						description: t("sidebar.descriptions.performanceTuning"),
 						hasAccess: hasSettingsAccess,
 					},
 					{
@@ -999,7 +1004,7 @@ export default function AppSidebar() {
 						title: t("sidebar.nav.featureFlags"),
 						url: "/workspace/config/feature-flags",
 						icon: Flag,
-						description: "Toggle feature flags",
+						description: t("sidebar.descriptions.featureFlags"),
 						hasAccess: hasFeatureFlagsAccess,
 					},
 				],

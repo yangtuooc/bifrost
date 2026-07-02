@@ -5,6 +5,7 @@ import * as React from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface SearchSelectOption {
 	value: string;
@@ -65,14 +66,15 @@ function DefaultEntryView({ option }: { option: SearchSelectOption }) {
 }
 
 function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(props: SearchSelectProps<T>) {
+	const { t } = useTranslation();
 	const {
 		options,
 		onValueSelect,
 		label,
 		entryView,
 		footer,
-		searchPlaceholder = "Search...",
-		emptyMessage = "No results found.",
+		searchPlaceholder = t("common.select.searchPlaceholder"),
+		emptyMessage = t("common.select.noResults"),
 		disabled = false,
 		open: controlledOpen,
 		onOpenChange,
@@ -88,7 +90,7 @@ function SearchSelect<T extends SearchSelectOption = SearchSelectOption>(props: 
 	const isSearching = isAsync ? (props.isSearching ?? false) : false;
 	const isLoading = isAsync ? (props.isLoading ?? false) : false;
 	const isError = isAsync ? (props.isError ?? false) : false;
-	const errorMessage = isAsync ? (props.errorMessage ?? "Failed to load.") : "";
+	const errorMessage = isAsync ? (props.errorMessage ?? t("common.select.failedToLoad")) : "";
 
 	const [internalOpen, setInternalOpen] = React.useState(false);
 	const [search, setSearch] = React.useState("");

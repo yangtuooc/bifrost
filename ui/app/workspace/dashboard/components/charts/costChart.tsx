@@ -1,6 +1,7 @@
 import type { CostHistogramResponse } from "@/lib/types/logs";
 import { formatCurrencyNumber } from "@/lib/utils/numbers";
 import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
 	formatCost,
@@ -9,7 +10,6 @@ import {
 	getModelColor,
 	OTHER_SERIES_COLOR,
 	OTHER_SERIES_KEY,
-	OTHER_SERIES_LABEL,
 	pickTopSeries,
 } from "../../utils/chartUtils";
 import { ChartErrorBoundary } from "./chartErrorBoundary";
@@ -24,6 +24,8 @@ interface CostChartProps {
 }
 
 function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
+	const { t } = useTranslation();
+
 	if (!active || !payload || !payload.length) return null;
 
 	const data = payload[0]?.payload;
@@ -43,7 +45,9 @@ function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
 								<div key={model} className="flex items-center justify-between gap-4">
 									<span className="flex items-center gap-1.5">
 										<span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOther ? OTHER_SERIES_COLOR : getModelColor(idx) }} />
-										<span className="max-w-[120px] truncate text-zinc-600 dark:text-zinc-400">{isOther ? OTHER_SERIES_LABEL : model}</span>
+										<span className="max-w-[120px] truncate text-zinc-600 dark:text-zinc-400">
+											{isOther ? t("dashboard.metrics.other") : model}
+										</span>
 									</span>
 									<span className="font-medium" style={{ color: isOther ? OTHER_SERIES_COLOR : getModelColor(idx) }}>
 										{formatCost(cost)}
@@ -52,7 +56,7 @@ function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
 							);
 						})}
 						<div className="flex items-center justify-between gap-4 border-t border-zinc-200 pt-1 dark:border-zinc-700">
-							<span className="text-zinc-600 dark:text-zinc-400">Total</span>
+							<span className="text-zinc-600 dark:text-zinc-400">{t("dashboard.metrics.total")}</span>
 							<span className="font-medium text-zinc-900 dark:text-zinc-100">{formatCost(data.total_cost)}</span>
 						</div>
 					</>
@@ -71,6 +75,8 @@ function CustomTooltip({ active, payload, selectedModel, displayModels }: any) {
 }
 
 function CostChartImpl({ data, chartType, startTime, endTime, selectedModel }: CostChartProps) {
+	const { t } = useTranslation();
+
 	const { chartData, displayModels } = useMemo(() => {
 		if (!data?.buckets || !data.bucket_size_seconds) {
 			return { chartData: [], displayModels: [] };
@@ -110,7 +116,7 @@ function CostChartImpl({ data, chartType, startTime, endTime, selectedModel }: C
 	}, [data, selectedModel]);
 
 	if (!data?.buckets || chartData.length === 0) {
-		return <div className="text-muted-foreground flex h-full items-center justify-center text-sm">No data available</div>;
+		return <div className="text-muted-foreground flex h-full items-center justify-center text-sm">{t("dashboard.empty.noData")}</div>;
 	}
 
 	const commonProps = {

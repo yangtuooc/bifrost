@@ -1,11 +1,4 @@
-// MCPHeadersAuthorizer mirrors OAuth2Authorizer's UI/UX for the per-user-
-// headers create flow: same Dialog shell, same wording structure, same
-// state machine (confirm → input → testing → success/failed), same Cancel /
-// Continue affordances. The divergence is that the verify step is a values
-// form filled inline (no upstream redirect/popup), and the create call is
-// a single POST /api/mcp/client where the server runs verify + discover +
-// persist atomically. Mirrors per-user OAuth where the admin's temp access
-// token plays the analogous role.
+// MCPHeadersAuthorizer 复用 OAuth2Authorizer 的交互结构，但验证步骤改为内联填写 header 示例值。
 
 import HeadersForm from "@/components/headersForm";
 import { Button } from "@/components/ui/button";
@@ -14,6 +7,7 @@ import { getErrorMessage, useCreateMCPClientMutation } from "@/lib/store";
 import { CreateMCPClientRequest } from "@/lib/types/mcp";
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface MCPHeadersAuthorizerProps {
 	open: boolean;
@@ -21,10 +15,9 @@ interface MCPHeadersAuthorizerProps {
 	onSuccess: () => void;
 	onError: (error: string) => void;
 	onConflict?: (error: string) => void;
-	// Full payload the parent has already assembled. The dialog adds
-	// user_headers (collected inline) and POSTs once.
+	// 父组件已组装好的完整 payload，弹窗只追加内联收集的 user_headers。
 	payload: CreateMCPClientRequest;
-	// Required key schema, rendered as the form's input fields.
+	// 必填 header key schema，会渲染为表单输入项。
 	perUserHeaderKeys: string[];
 }
 
@@ -39,16 +32,15 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 	payload,
 	perUserHeaderKeys,
 }) => {
+	const { t } = useTranslation();
 	const [status, setStatus] = useState<Status>("confirm");
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
-	// Set to true when the user cancels so in-flight async callbacks do not
-	// invoke onSuccess / onError / onClose after the dialog is dismissed.
+	// 用户取消后置为 true，避免未完成异步回调在弹窗关闭后触发外部状态。
 	const cancelledRef = useRef(false);
 
 	const [createMCPClient] = useCreateMCPClientMutation();
 
-	// Reset state every time the dialog opens so a retry from a previous
-	// session doesn't carry over.
+	// 每次打开弹窗都重置状态，避免上一次重试状态泄漏。
 	useEffect(() => {
 		if (open) {
 			setStatus("confirm");
@@ -115,13 +107,17 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 				}}
 			>
 				<DialogHeader>
-					<DialogTitle>{status === "confirm" ? "Test Header Configuration" : "Header Authorization"}</DialogTitle>
+					<DialogTitle>
+						{status === "confirm"
+							? t("mcpRegistry.authorizers.headers.titles.confirm")
+							: t("mcpRegistry.authorizers.headers.titles.default")}
+					</DialogTitle>
 					<DialogDescription>
-						{status === "confirm" && "A one-time test is needed to verify your header setup."}
-						{status === "input" && "Enter sample values to verify the connection."}
-						{status === "testing" && "Verifying connection..."}
-						{status === "success" && "Verification successful!"}
-						{status === "failed" && "Verification failed"}
+						{status === "confirm" && t("mcpRegistry.authorizers.headers.descriptions.confirm")}
+						{status === "input" && t("mcpRegistry.authorizers.headers.descriptions.input")}
+						{status === "testing" && t("mcpRegistry.authorizers.headers.descriptions.testing")}
+						{status === "success" && t("mcpRegistry.authorizers.headers.descriptions.success")}
+						{status === "failed" && t("mcpRegistry.authorizers.headers.descriptions.failed")}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -129,21 +125,22 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 					{status === "confirm" && (
 						<>
 							<div className="text-muted-foreground space-y-3 text-sm">
+								<p>{t("mcpRegistry.authorizers.headers.confirm.setup")}</p>
 								<p>
-									To set up this MCP server, we need to verify that your header configuration is correct and discover the available tools.
+									{t("mcpRegistry.authorizers.headers.confirm.oneTimeStart")}{" "}
+									<strong>{t("mcpRegistry.authorizers.headers.confirm.oneTimeStrong")}</strong>{" "}
+									{t("mcpRegistry.authorizers.headers.confirm.oneTimeMiddle")}{" "}
+									<strong>{t("mcpRegistry.authorizers.headers.confirm.notStrong")}</strong>{" "}
+									{t("mcpRegistry.authorizers.headers.confirm.oneTimeEnd")}
 								</p>
-								<p>
-									You will be asked to provide sample values for the required headers. This is a <strong>one-time test</strong> to confirm
-									the setup works. Your sample values will <strong>not</strong> be stored or used for any other purpose.
-								</p>
-								<p>Once verified, each user will submit their own header values when they use this MCP server.</p>
+								<p>{t("mcpRegistry.authorizers.headers.confirm.userValues")}</p>
 							</div>
 							<div className="flex w-full justify-end space-x-2">
 								<Button onClick={handleCancel} variant="outline" data-testid="per-user-headers-cancel">
-									Cancel
+									{t("common.actions.cancel")}
 								</Button>
 								<Button onClick={handleConfirm} data-testid="per-user-headers-confirm">
-									Continue with Test
+									{t("mcpRegistry.authorizers.headers.confirm.continueWithTest")}
 								</Button>
 							</div>
 						</>
@@ -152,12 +149,14 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 					{status === "input" && (
 						<>
 							<p className="text-muted-foreground text-sm">
-								These values are used only for this verification. They are <strong>not</strong> persisted.
+								{t("mcpRegistry.authorizers.headers.input.valuesOnly")}{" "}
+								<strong>{t("mcpRegistry.authorizers.headers.input.notPersisted")}</strong>{" "}
+								{t("mcpRegistry.authorizers.headers.input.valuesSuffix")}
 							</p>
 							<HeadersForm
 								requiredKeys={perUserHeaderKeys}
 								onSubmit={handleRunTest}
-								submitLabel="Run Test"
+								submitLabel={t("mcpRegistry.authorizers.headers.input.runTest")}
 								onCancel={handleCancel}
 								testIdPrefix="per-user-headers-admin-test"
 							/>
@@ -168,7 +167,7 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 						<>
 							<div className="flex flex-col items-center space-y-2">
 								<Loader2 className="text-secondary-foreground h-4 w-4 animate-spin" />
-								<p className="text-muted-foreground text-sm">Verifying connection and discovering tools...</p>
+								<p className="text-muted-foreground text-sm">{t("mcpRegistry.authorizers.headers.testing")}</p>
 							</div>
 						</>
 					)}
@@ -180,7 +179,7 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 								</svg>
 							</div>
-							<p className="text-sm text-green-600">MCP server connected successfully!</p>
+							<p className="text-sm text-green-600">{t("mcpRegistry.authorizers.headers.success")}</p>
 						</div>
 					)}
 
@@ -191,9 +190,9 @@ export const MCPHeadersAuthorizer: React.FC<MCPHeadersAuthorizerProps> = ({
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
 							</div>
-							<p className="text-sm text-red-600">{errorMessage || "An error occurred"}</p>
+							<p className="text-sm text-red-600">{errorMessage || t("mcpRegistry.authorizers.headers.failedFallback")}</p>
 							<Button onClick={handleRetry} variant="outline" data-testid="mcp-headers-authorizer-retry-btn">
-								Retry
+								{t("common.actions.retry")}
 							</Button>
 						</div>
 					)}

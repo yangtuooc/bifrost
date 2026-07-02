@@ -1,6 +1,6 @@
 /**
- * Routing Rules View
- * Main orchestrator component for routing rules management
+ * Routing Rules 视图
+ * 管理路由规则的主编排组件
  */
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { GitBranch, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RoutingRuleInfoSheet } from "./routingRuleInfoSheet";
 import { RoutingRuleSheet } from "./routingRuleSheet";
 import { RoutingRulesEmptyState } from "./routingRulesEmptyState";
@@ -20,6 +21,7 @@ const POLLING_INTERVAL = 5000;
 const PAGE_SIZE = 25;
 
 export function RoutingRulesView() {
+	const { t } = useTranslation();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingRule, setEditingRule] = useState<RoutingRule | null>(null);
 	const [infoSheetOpen, setInfoSheetOpen] = useState(false);
@@ -30,12 +32,12 @@ export function RoutingRulesView() {
 
 	const debouncedSearch = useDebouncedValue(search, 300);
 
-	// Reset to first page when search changes
+	// 搜索条件变化时回到第一页
 	useEffect(() => {
 		setOffset(0);
 	}, [debouncedSearch]);
 
-	// Permissions
+	// 权限
 	const canCreate = useRbac(RbacResource.RoutingRules, RbacOperation.Create);
 	const canDelete = useRbac(RbacResource.RoutingRules, RbacOperation.Delete);
 	const canUpdate = useRbac(RbacResource.RoutingRules, RbacOperation.Update);
@@ -55,7 +57,7 @@ export function RoutingRulesView() {
 	const rules = rulesData?.rules || [];
 	const totalCount = rulesData?.total_count || 0;
 
-	// Snap offset back when total shrinks past current page (e.g. delete last item on last page)
+	// 总数缩小时将 offset 拉回有效页
 	useEffect(() => {
 		if (!rulesData || offset < totalCount) return;
 		setOffset(totalCount === 0 ? 0 : Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE);
@@ -102,7 +104,7 @@ export function RoutingRulesView() {
 
 	const hasActiveFilters = debouncedSearch;
 
-	// True empty state: no rules at all (not just filtered to zero)
+	// 真空状态：没有任何规则，而不是仅被筛选为空
 	if (!isLoading && totalCount === 0 && !hasActiveFilters) {
 		return (
 			<>
@@ -114,23 +116,23 @@ export function RoutingRulesView() {
 
 	return (
 		<div className="flex flex-col overflow-y-auto">
-			{/* Header */}
+			{/* 头部 */}
 			<div className="mb-4 flex items-center justify-between">
 				<div>
-					<h1 className="text-foreground text-lg font-semibold">Routing Rules</h1>
-					<p className="text-muted-foreground text-sm">Manage CEL-based routing rules for intelligent request routing across providers</p>
+					<h1 className="text-foreground text-lg font-semibold">{t("routingRules.view.title")}</h1>
+					<p className="text-muted-foreground text-sm">{t("routingRules.view.description")}</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="sm" asChild className="gap-2">
 						<Link to="/workspace/routing-rules/tree">
 							<GitBranch className="h-4 w-4" />
-							<span className="hidden sm:inline">View Tree</span>
+							<span className="hidden sm:inline">{t("routingRules.view.viewTree")}</span>
 						</Link>
 					</Button>
 					{canCreate && (
 						<Button data-testid="create-routing-rule-btn" onClick={handleCreateNew} disabled={isLoading} className="gap-2">
 							<Plus className="h-4 w-4" />
-							<span className="hidden sm:inline">New Rule</span>
+							<span className="hidden sm:inline">{t("routingRules.actions.newRule")}</span>
 						</Button>
 					)}
 				</div>

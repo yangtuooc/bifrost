@@ -3,7 +3,8 @@ import { BifrostImageGenerationOutput, ImageEditInput, ImageVariationInput } fro
 import { Image, ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageMessage } from "@/components/chat/ImageMessage";
 import { Button } from "@/components/ui/button";
-import { RequestTypeLabels } from "@/lib/constants/logs";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 interface ImageGenerationInput {
 	prompt: string;
@@ -17,7 +18,7 @@ interface ImageViewProps {
 	requestType?: string;
 }
 
-// Detect MIME type from base64 magic bytes and return a data URL
+// 根据 base64 魔数识别 MIME 类型并返回 data URL
 function getImageSrc(b64: string): string {
 	if (b64.startsWith("/9j/")) return `data:image/jpeg;base64,${b64}`;
 	if (b64.startsWith("iVBOR")) return `data:image/png;base64,${b64}`;
@@ -26,32 +27,33 @@ function getImageSrc(b64: string): string {
 	return `data:image/png;base64,${b64}`;
 }
 
-// Helper function to get method type label from request type
-function getMethodTypeLabel(requestType?: string): string {
-	if (!requestType) return "Image Generation";
+// 根据请求类型返回展示名称
+function getMethodTypeLabel(requestType: string | undefined, t: TFunction): string {
+	if (!requestType) return t("logs.details.requestTypes.imageGeneration");
 
 	const normalizedType = requestType.toLowerCase();
 	if (normalizedType.includes("image_edit")) {
-		return RequestTypeLabels[normalizedType as keyof typeof RequestTypeLabels] || "Image Edit";
+		return t("logs.details.requestTypes.imageEdit");
 	}
 	if (normalizedType.includes("image_variation")) {
-		return RequestTypeLabels[normalizedType as keyof typeof RequestTypeLabels] || "Image Variation";
+		return t("logs.details.requestTypes.imageVariation");
 	}
-	return RequestTypeLabels[normalizedType as keyof typeof RequestTypeLabels] || "Image Generation";
+	return t("logs.details.requestTypes.imageGeneration");
 }
 
 export default function ImageView({ imageInput, imageEditInput, imageVariationInput, imageOutput, requestType }: ImageViewProps) {
+	const { t } = useTranslation();
 	const [currentIndex, setCurrentIndex] = useState(0);
 
-	// Get all valid images
+	// 获取所有有效图片
 	const images = imageOutput?.data?.filter((img) => img.url || img.b64_json) ?? [];
 	const totalImages = images.length;
 	const currentImage = images[currentIndex] ?? null;
 
-	// Get method type label
-	const methodTypeLabel = getMethodTypeLabel(requestType);
+	// 获取方法类型展示名称
+	const methodTypeLabel = getMethodTypeLabel(requestType, t);
 
-	// Clamp currentIndex when images array changes to ensure it's always valid
+	// 图片数组变化时限制 currentIndex，确保索引始终有效
 	useEffect(() => {
 		if (totalImages === 0) {
 			setCurrentIndex(0);
@@ -60,44 +62,44 @@ export default function ImageView({ imageInput, imageEditInput, imageVariationIn
 		}
 	}, [totalImages]);
 
-	// Looping navigation
+	// 循环导航
 	const goToPrevious = () => setCurrentIndex((prev) => (prev === 0 ? totalImages - 1 : prev - 1));
 	const goToNext = () => setCurrentIndex((prev) => (prev === totalImages - 1 ? 0 : prev + 1));
 
 	return (
 		<div className="space-y-4">
-			{/* Image Input */}
+			{/* 图片输入 */}
 			{imageInput && (
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Image className="h-4 w-4" />
-						{methodTypeLabel} Input
+						{t("logs.details.sections.inputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-4 p-6">
-						<div className="text-muted-foreground mb-2 text-xs font-medium">PROMPT</div>
+						<div className="text-muted-foreground mb-2 text-xs font-medium">{t("logs.details.labels.prompt")}</div>
 						<div className="font-mono text-xs">{imageInput.prompt}</div>
 					</div>
 				</div>
 			)}
 
-			{/* Image Edit Input */}
+			{/* 图片编辑输入 */}
 			{imageEditInput && (
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Image className="h-4 w-4" />
-						{methodTypeLabel} Input
+						{t("logs.details.sections.inputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-4 p-6">
 						{imageEditInput.images && imageEditInput.images.length > 0 && (
 							<div>
-								<div className="text-muted-foreground mb-2 text-xs font-medium">INPUT IMAGES</div>
+								<div className="text-muted-foreground mb-2 text-xs font-medium">{t("logs.details.labels.inputImages")}</div>
 								<div className="flex flex-wrap gap-2">
 									{imageEditInput.images.map((img, i) =>
 										img.image ? (
 											<img
 												key={i}
 												src={getImageSrc(img.image)}
-												alt={`Input image ${i + 1}`}
+												alt={t("logs.details.alt.inputImageNumber", { index: i + 1 })}
 												className="max-h-48 max-w-48 rounded border object-contain"
 											/>
 										) : null,
@@ -106,44 +108,44 @@ export default function ImageView({ imageInput, imageEditInput, imageVariationIn
 							</div>
 						)}
 						<div>
-							<div className="text-muted-foreground mb-2 text-xs font-medium">PROMPT</div>
+							<div className="text-muted-foreground mb-2 text-xs font-medium">{t("logs.details.labels.prompt")}</div>
 							<div className="font-mono text-xs">{imageEditInput.prompt}</div>
 						</div>
 					</div>
 				</div>
 			)}
 
-			{/* Image Variation Input */}
+			{/* 图片变体输入 */}
 			{imageVariationInput && imageVariationInput.image?.image && (
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Image className="h-4 w-4" />
-						{methodTypeLabel} Input
+						{t("logs.details.sections.inputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-4 p-6">
-						<div className="text-muted-foreground mb-2 text-xs font-medium">INPUT IMAGE</div>
+						<div className="text-muted-foreground mb-2 text-xs font-medium">{t("logs.details.labels.inputImage")}</div>
 						<img
 							src={getImageSrc(imageVariationInput.image.image)}
-							alt="Input image"
+							alt={t("logs.details.alt.inputImage")}
 							className="max-h-48 max-w-48 rounded border object-contain"
 						/>
 					</div>
 				</div>
 			)}
 
-			{/* Image Output */}
+			{/* 图片输出 */}
 			{currentImage && (
 				<div className="w-full rounded-sm border">
 					<div className="flex items-center gap-2 border-b px-6 py-2 text-sm font-medium">
 						<Image className="h-4 w-4" />
-						{methodTypeLabel} Output
+						{t("logs.details.sections.outputWithType", { type: methodTypeLabel })}
 					</div>
 					<div className="space-y-4 p-6">
 						{currentImage && (
 							<>
 								{currentImage.revised_prompt && (
 									<div className="mb-4">
-										<div className="text-muted-foreground mb-2 text-xs font-medium">REVISED PROMPT</div>
+										<div className="text-muted-foreground mb-2 text-xs font-medium">{t("logs.details.labels.revisedPrompt")}</div>
 										<div className="font-mono text-xs">{currentImage.revised_prompt}</div>
 									</div>
 								)}
@@ -156,13 +158,25 @@ export default function ImageView({ imageInput, imageEditInput, imageVariationIn
 
 								{totalImages > 1 && (
 									<div className="mt-3 flex items-center justify-center gap-4">
-										<Button variant="outline" size="sm" onClick={goToPrevious} aria-label="Previous image" title="Previous image">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={goToPrevious}
+											aria-label={t("logs.details.actions.previousImage")}
+											title={t("logs.details.actions.previousImage")}
+										>
 											<ChevronLeft className="h-4 w-4" />
 										</Button>
 										<span className="text-muted-foreground text-sm">
 											{currentIndex + 1} / {totalImages}
 										</span>
-										<Button variant="outline" size="sm" onClick={goToNext} aria-label="Next image" title="Next image">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={goToNext}
+											aria-label={t("logs.details.actions.nextImage")}
+											title={t("logs.details.actions.nextImage")}
+										>
 											<ChevronRight className="h-4 w-4" />
 										</Button>
 									</div>

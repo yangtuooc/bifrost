@@ -24,6 +24,7 @@ import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { Link } from "@tanstack/react-router";
 import { Box, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, PencilIcon, Plus, RefreshCcw, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import MCPClientSheet from "./mcpClientSheet";
 import { MCPServersEmptyState } from "./mcpServersEmptyState";
 import { MCPUsageGuideSheet } from "./mcpUsageGuide";
@@ -47,6 +48,7 @@ function MCPClientActionsMenu({
 	onReconnect: (client: MCPClient) => void;
 	onDelete: (client: MCPClient) => void;
 }) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
@@ -56,7 +58,7 @@ function MCPClientActionsMenu({
 					variant="ghost"
 					size="icon"
 					className="h-8 w-8"
-					aria-label="MCP server actions"
+					aria-label={t("mcpRegistry.actions.serverActions")}
 					data-testid={`mcp-client-actions-${client.config.client_id}-btn`}
 				>
 					{isReconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
@@ -83,7 +85,7 @@ function MCPClientActionsMenu({
 						}}
 					>
 						<PencilIcon className="h-4 w-4" />
-						Edit
+						{t("mcpRegistry.actions.edit")}
 					</DropdownMenuItem>
 				)}
 				{hasUpdateAccess && (
@@ -97,7 +99,7 @@ function MCPClientActionsMenu({
 						}}
 					>
 						<RefreshCcw className="h-4 w-4" />
-						Reconnect
+						{t("mcpRegistry.actions.reconnect")}
 					</DropdownMenuItem>
 				)}
 				{hasDeleteAccess && (
@@ -111,7 +113,7 @@ function MCPClientActionsMenu({
 						}}
 					>
 						<Trash2 className="h-4 w-4" />
-						Delete
+						{t("mcpRegistry.actions.delete")}
 					</DropdownMenuItem>
 				)}
 			</DropdownMenuContent>
@@ -146,6 +148,7 @@ export default function MCPClientsTable({
 	limit,
 	onOffsetChange,
 }: MCPClientsTableProps) {
+	const { t } = useTranslation();
 	const [formOpen, setFormOpen] = useState(false);
 	const hasCreateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Create);
 	const hasUpdateMCPClientAccess = useRbac(RbacResource.MCPGateway, RbacOperation.Update);
@@ -172,25 +175,31 @@ export default function MCPClientsTable({
 			setReconnectingClients((prev) => [...prev, client.config.client_id]);
 			await reconnectMCPClient(client.config.client_id).unwrap();
 			setReconnectingClients((prev) => prev.filter((id) => id !== client.config.client_id));
-			toast({ title: "Reconnected", description: `Client ${client.config.name} reconnected successfully.` });
+			toast({
+				title: t("mcpRegistry.toasts.reconnectedTitle"),
+				description: t("mcpRegistry.toasts.reconnectedDescription", { name: client.config.name }),
+			});
 			if (refetch) {
 				await refetch();
 			}
 		} catch (error) {
 			setReconnectingClients((prev) => prev.filter((id) => id !== client.config.client_id));
-			toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
+			toast({ title: t("mcpRegistry.toasts.errorTitle"), description: getErrorMessage(error), variant: "destructive" });
 		}
 	};
 
 	const handleDelete = async (client: MCPClient) => {
 		try {
 			await deleteMCPClient(client.config.client_id).unwrap();
-			toast({ title: "Deleted", description: `Client ${client.config.name} removed successfully.` });
+			toast({
+				title: t("mcpRegistry.toasts.deletedTitle"),
+				description: t("mcpRegistry.toasts.deletedDescription", { name: client.config.name }),
+			});
 			if (refetch) {
 				await refetch();
 			}
 		} catch (error) {
-			toast({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
+			toast({ title: t("mcpRegistry.toasts.errorTitle"), description: getErrorMessage(error), variant: "destructive" });
 		}
 	};
 
@@ -219,13 +228,13 @@ export default function MCPClientsTable({
 			case "none":
 			case undefined:
 			case "":
-				return "None";
+				return t("mcpRegistry.auth.none");
 			case "headers":
 			case "per_user_headers":
-				return "Headers";
+				return t("mcpRegistry.auth.headers");
 			case "oauth":
 			case "per_user_oauth":
-				return "OAuth";
+				return t("mcpRegistry.auth.oauth");
 			default:
 				return type;
 		}
@@ -235,10 +244,10 @@ export default function MCPClientsTable({
 		switch (type) {
 			case "per_user_oauth":
 			case "per_user_headers":
-				return "Per-User";
+				return t("mcpRegistry.auth.perUser");
 			case "oauth":
 			case "headers":
-				return "Shared";
+				return t("mcpRegistry.auth.shared");
 			default:
 				return "-";
 		}
@@ -317,21 +326,20 @@ export default function MCPClientsTable({
 			<AlertDialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Remove MCP Server</AlertDialogTitle>
+						<AlertDialogTitle>{t("mcpRegistry.dialogs.removeTitle")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							Are you sure you want to remove MCP server {clientToDelete?.config.name}? You will need to reconnect the server to continue
-							using it.
+							{t("mcpRegistry.dialogs.removeDescription", { name: clientToDelete?.config.name })}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={() => {
 								if (clientToDelete) void handleDelete(clientToDelete);
 							}}
 							className="bg-destructive hover:bg-destructive/90"
 						>
-							Delete
+							{t("common.actions.delete")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
@@ -339,26 +347,26 @@ export default function MCPClientsTable({
 
 			<div className="mb-4 flex items-center justify-between gap-4">
 				<div>
-					<h2 className="text-lg font-semibold tracking-tight">MCP Server Catalog</h2>
-					<p className="text-muted-foreground text-sm">Manage servers that can connect to the MCP Tools endpoint.</p>
+					<h2 className="text-lg font-semibold tracking-tight">{t("mcpRegistry.catalog.title")}</h2>
+					<p className="text-muted-foreground text-sm">{t("mcpRegistry.catalog.description")}</p>
 				</div>
 				<div className="flex gap-2">
 					<MCPUsageGuideSheet />
 					<Button asChild variant="outline" data-testid="mcp-library-link-btn" className="h-8">
 						<Link to="/workspace/mcp-registry/library">
 							<Box />
-							<span className="hidden sm:inline">Library</span>
+							<span className="hidden sm:inline">{t("mcpRegistry.catalog.library")}</span>
 						</Link>
 					</Button>
 					<Button
 						onClick={handleCreate}
 						disabled={!hasCreateMCPClientAccess}
 						data-testid="create-mcp-client-btn"
-						aria-label="New MCP Server"
+						aria-label={t("mcpRegistry.catalog.newServer")}
 						className="h-8 gap-2"
 					>
 						<Plus />
-						<span className="hidden sm:inline">New MCP Server</span>
+						<span className="hidden sm:inline">{t("mcpRegistry.catalog.newServer")}</span>
 					</Button>
 				</div>
 			</div>
@@ -368,8 +376,8 @@ export default function MCPClientsTable({
 				<div className="relative max-w-sm flex-1">
 					<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 					<Input
-						aria-label="Search MCP servers by name"
-						placeholder="Search by name..."
+						aria-label={t("mcpRegistry.filters.searchAria")}
+						placeholder={t("mcpRegistry.filters.searchPlaceholder")}
 						value={search}
 						onChange={(e) => onSearchChange(e.target.value)}
 						className="pl-9"
@@ -384,7 +392,7 @@ export default function MCPClientsTable({
 						onClick={onServerFilterClear}
 						data-testid="mcp-client-server-filter-clear-btn"
 					>
-						Server filter
+						{t("mcpRegistry.filters.serverFilter")}
 						<X className="size-3" />
 					</Button>
 				)}
@@ -395,16 +403,16 @@ export default function MCPClientsTable({
 					<Table data-testid="mcp-clients-table">
 						<TableHeader className="sticky top-0">
 							<TableRow className="bg-muted/50">
-								<TableHead className="font-semibold">Name</TableHead>
-								<TableHead className="font-semibold">Connection Type</TableHead>
-								<TableHead className="font-semibold">Auth Type</TableHead>
-								<TableHead className="font-semibold">Auth Scope</TableHead>
-								<TableHead className="font-semibold">Code Mode</TableHead>
-								<TableHead className="font-semibold">VK Access</TableHead>
-								<TableHead className="font-semibold">Enabled Tools</TableHead>
-								<TableHead className="font-semibold">Auto-execute Tools</TableHead>
-								<TableHead className="font-semibold">State</TableHead>
-								<TableHead className="font-semibold">Status</TableHead>
+								<TableHead className="font-semibold">{t("common.table.name")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.connectionType")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.authType")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.authScope")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.codeMode")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.vkAccess")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.enabledTools")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.autoExecuteTools")}</TableHead>
+								<TableHead className="font-semibold">{t("mcpRegistry.table.state")}</TableHead>
+								<TableHead className="font-semibold">{t("common.table.status")}</TableHead>
 								<TableHead className={`bg-muted/50 sticky right-0 z-10 w-14 text-right ${PIN_SHADOW_RIGHT}`}></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -412,7 +420,7 @@ export default function MCPClientsTable({
 							{mcpClients.length === 0 ? (
 								<TableRow>
 									<TableCell colSpan={11} className="h-24 text-center">
-										<span className="text-muted-foreground text-sm">No matching MCP servers found.</span>
+										<span className="text-muted-foreground text-sm">{t("mcpRegistry.empty.noMatching")}</span>
 									</TableCell>
 								</TableRow>
 							) : (
@@ -449,15 +457,19 @@ export default function MCPClientsTable({
 														c.state == "connected" ? MCP_STATUS_COLORS[c.config.is_code_mode_client ? "connected" : "disconnected"] : ""
 													}
 												>
-													{c.state == "connected" ? <>{c.config.is_code_mode_client ? "Enabled" : "Disabled"}</> : "-"}
+													{c.state == "connected" ? (
+														<>{c.config.is_code_mode_client ? t("common.status.enabled") : t("common.status.disabled")}</>
+													) : (
+														"-"
+													)}
 												</Badge>
 											</TableCell>
 											<TableCell data-testid="mcp-client-vk-access">
 												{c.config.allow_on_all_virtual_keys
-													? "All"
+													? t("common.filters.all")
 													: c.vk_configs?.length
-														? `${c.vk_configs.length} ${c.vk_configs.length === 1 ? "VK" : "VKs"}`
-														: "None"}
+														? t("mcpRegistry.table.vkCount", { count: c.vk_configs.length })
+														: t("common.status.none")}
 											</TableCell>
 											<TableCell>
 												{c.state == "connected" ? (
@@ -506,11 +518,19 @@ export default function MCPClientsTable({
 														})
 															.unwrap()
 															.then(() => {
-																toast({ title: `Server ${checked ? "enabled" : "disabled"} successfully` });
+																toast({
+																	title: t("mcpRegistry.toasts.serverToggled", {
+																		state: checked ? t("common.status.enabled") : t("common.status.disabled"),
+																	}),
+																});
 																if (refetch) refetch();
 															})
 															.catch((err) => {
-																toast({ title: "Error", description: getErrorMessage(err), variant: "destructive" });
+																toast({
+																	title: t("mcpRegistry.toasts.errorTitle"),
+																	description: getErrorMessage(err),
+																	variant: "destructive",
+																});
 															})
 															.finally(() => {
 																setTogglingClientIds((prev) => {
@@ -549,8 +569,11 @@ export default function MCPClientsTable({
 				{totalCount > 0 && (
 					<div className="flex shrink-0 items-center justify-between text-xs" data-testid="pagination">
 						<div className="text-muted-foreground flex items-center gap-2">
-							{(offset + 1).toLocaleString()}-{Math.min(offset + limit, totalCount).toLocaleString()} of {totalCount.toLocaleString()}{" "}
-							entries
+							{t("common.pagination.entriesRange", {
+								start: (offset + 1).toLocaleString(),
+								end: Math.min(offset + limit, totalCount).toLocaleString(),
+								total: totalCount.toLocaleString(),
+							})}
 						</div>
 
 						<div className="flex items-center gap-2">
@@ -560,15 +583,15 @@ export default function MCPClientsTable({
 								onClick={() => onOffsetChange(Math.max(0, offset - limit))}
 								disabled={offset === 0}
 								data-testid="mcp-clients-pagination-prev-btn"
-								aria-label="Previous page"
+								aria-label={t("common.pagination.previousPage")}
 							>
 								<ChevronLeft className="size-3" />
 							</Button>
 
 							<div className="flex items-center gap-1">
-								<span>Page</span>
+								<span>{t("common.pagination.page")}</span>
 								<span>{Math.floor(offset / limit) + 1}</span>
-								<span>of {Math.ceil(totalCount / limit)}</span>
+								<span>{t("common.pagination.of", { total: Math.ceil(totalCount / limit) })}</span>
 							</div>
 
 							<Button
@@ -577,7 +600,7 @@ export default function MCPClientsTable({
 								onClick={() => onOffsetChange(offset + limit)}
 								disabled={offset + limit >= totalCount}
 								data-testid="mcp-clients-pagination-next-btn"
-								aria-label="Next page"
+								aria-label={t("common.pagination.nextPage")}
 							>
 								<ChevronRight className="size-3" />
 							</Button>

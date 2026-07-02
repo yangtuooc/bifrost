@@ -6,6 +6,7 @@ import { SecretVar } from "@/lib/types/mcp";
 import { cn } from "@/lib/utils";
 import { Trash } from "lucide-react";
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Support both plain string values and SecretVar objects
 type HeaderValue = string | SecretVar;
@@ -66,15 +67,20 @@ const isValueEmpty = (val: HeaderValue): boolean => {
 export function HeadersTable<T extends HeaderValue>({
 	value,
 	onChange,
-	keyPlaceholder = "Header name",
-	valuePlaceholder = "Header value",
-	label = "Headers",
+	keyPlaceholder,
+	valuePlaceholder,
+	label,
 	disabled = false,
 	useSecretVarInput,
 	fixedKeys,
 	renderKeyInput,
 	renderValueInput,
 }: HeadersTableProps<T>) {
+	const { t } = useTranslation();
+	const resolvedKeyPlaceholder = keyPlaceholder ?? t("headersTable.keyPlaceholder");
+	const resolvedValuePlaceholder = valuePlaceholder ?? t("headersTable.valuePlaceholder");
+	const resolvedLabel = label ?? t("headersTable.defaultLabel");
+
 	// Use explicit prop if provided, otherwise detect from existing values
 	const isSecretVarMode = useSecretVarInput ?? Object.values(value || {}).some((v) => isSecretVar(v));
 
@@ -205,20 +211,20 @@ export function HeadersTable<T extends HeaderValue>({
 
 	return (
 		<div className="w-full">
-			{label && (
+			{resolvedLabel && (
 				<label className="mb-2 block text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-					{label}
+					{resolvedLabel}
 				</label>
 			)}
 			<div className="rounded-md border">
 				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
-							<TableHead className="w-[40%] px-4 py-2">Name</TableHead>
-							<TableHead className="px-4 py-2">Value</TableHead>
+							<TableHead className="w-[40%] px-4 py-2">{t("headersTable.name")}</TableHead>
+							<TableHead className="px-4 py-2">{t("headersTable.value")}</TableHead>
 							{!isFixedKeys && (
 								<TableHead className="w-10 p-0">
-									<span className="sr-only">Actions</span>
+									<span className="sr-only">{t("headersTable.actions")}</span>
 								</TableHead>
 							)}
 						</TableRow>
@@ -248,7 +254,7 @@ export function HeadersTable<T extends HeaderValue>({
 												renderKeyInput({
 													value: hasConflict ? (conflictKey ?? "") : key,
 													onChange: (newKey) => handleKeyChange(key, newKey, headerValue, index),
-													placeholder: keyPlaceholder,
+													placeholder: resolvedKeyPlaceholder,
 													disabled,
 													rowKey: key,
 												})
@@ -262,7 +268,7 @@ export function HeadersTable<T extends HeaderValue>({
 												/>
 											) : (
 												<Input
-													placeholder={keyPlaceholder}
+													placeholder={resolvedKeyPlaceholder}
 													value={hasConflict ? conflictKey : key}
 													data-row={index}
 													data-column="key"
@@ -272,7 +278,7 @@ export function HeadersTable<T extends HeaderValue>({
 													disabled={disabled}
 												/>
 											)}
-											{hasConflict && <span className="text-destructive px-3 text-xs">Duplicate key</span>}
+											{hasConflict && <span className="text-destructive px-3 text-xs">{t("headersTable.duplicateKey")}</span>}
 										</div>
 									</TableCell>
 									<TableCell className="p-2">
@@ -280,13 +286,13 @@ export function HeadersTable<T extends HeaderValue>({
 											renderValueInput({
 												value: getDisplayValue(headerValue),
 												onChange: (newVal) => handleValueChange(key, newVal, index),
-												placeholder: valuePlaceholder,
+												placeholder: resolvedValuePlaceholder,
 												disabled,
 												rowKey: key,
 											})
 										) : isHeaderSecretVar ? (
 											<SecretVarInput
-												placeholder={valuePlaceholder}
+												placeholder={resolvedValuePlaceholder}
 												value={headerValue as SecretVar}
 												data-row={index}
 												data-column="value"
@@ -297,7 +303,7 @@ export function HeadersTable<T extends HeaderValue>({
 											/>
 										) : (
 											<Input
-												placeholder={valuePlaceholder}
+												placeholder={resolvedValuePlaceholder}
 												value={getDisplayValue(headerValue)}
 												data-row={index}
 												data-column="value"
@@ -311,7 +317,14 @@ export function HeadersTable<T extends HeaderValue>({
 									{!isFixedKeys && (
 										<TableCell className="p-0">
 											{!disabled && !isEmptyTrailingRow && (
-												<Button type="button" variant="ghost" size="icon" onClick={() => handleDelete(key, index)} className="h-8 w-8">
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon"
+													onClick={() => handleDelete(key, index)}
+													className="h-8 w-8"
+													aria-label={t("headersTable.remove")}
+												>
 													<Trash className="h-4 w-4" />
 												</Button>
 											)}

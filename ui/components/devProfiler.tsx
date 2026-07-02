@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/strings";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 // Format nanoseconds to human-readable string
@@ -162,6 +163,8 @@ function GoroutineHealthSection({
 	onSkipGoroutine,
 	onClearSkipped,
 }: GoroutineHealthProps): React.ReactNode {
+	const { t } = useTranslation();
+
 	if (!goroutineData) return null;
 
 	const { summary, total_goroutines } = goroutineData;
@@ -172,11 +175,11 @@ function GoroutineHealthSection({
 			<div className="mb-2 flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<Activity className="h-3 w-3 text-emerald-400" />
-					<span className="text-zinc-400">Goroutine Health</span>
+					<span className="text-zinc-400">{t("devProfiler.goroutineHealth")}</span>
 				</div>
 				<div className="flex items-center gap-2">
 					{goroutineTrend?.isGrowing && (
-						<span className="flex items-center gap-1 text-amber-400" title="Goroutine count growing">
+						<span className="flex items-center gap-1 text-amber-400" title={t("devProfiler.goroutineCountGrowing")}>
 							<TrendingUp className="h-3 w-3" />
 							<span className="text-[10px]">+{goroutineTrend.growthPercent.toFixed(0)}%</span>
 						</span>
@@ -184,17 +187,17 @@ function GoroutineHealthSection({
 					{goroutineHealth === "critical" && (
 						<span className="flex items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] text-red-400">
 							<AlertTriangle className="h-3 w-3" />
-							Stuck
+							{t("common.status.stuck")}
 						</span>
 					)}
 					{goroutineHealth === "warning" && (
 						<span className="flex items-center gap-1 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-400">
 							<AlertTriangle className="h-3 w-3" />
-							Long Wait
+							{t("common.status.longWait")}
 						</span>
 					)}
 					{goroutineHealth === "healthy" && (
-						<span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-400">Healthy</span>
+						<span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-400">{t("common.status.healthy")}</span>
 					)}
 				</div>
 			</div>
@@ -202,19 +205,19 @@ function GoroutineHealthSection({
 			{/* Summary stats */}
 			<div className="mb-2 grid grid-cols-4 gap-2 rounded bg-zinc-800/50 p-2">
 				<div className="flex flex-col items-center">
-					<span className="text-[10px] text-zinc-500">Total</span>
+					<span className="text-[10px] text-zinc-500">{t("devProfiler.total")}</span>
 					<span className="font-semibold text-emerald-400">{total_goroutines}</span>
 				</div>
 				<div className="flex flex-col items-center">
-					<span className="text-[10px] text-zinc-500">Background</span>
+					<span className="text-[10px] text-zinc-500">{t("devProfiler.background")}</span>
 					<span className="font-semibold text-blue-400">{summary.background}</span>
 				</div>
 				<div className="flex flex-col items-center">
-					<span className="text-[10px] text-zinc-500">Per-Request</span>
+					<span className="text-[10px] text-zinc-500">{t("devProfiler.perRequest")}</span>
 					<span className="font-semibold text-amber-400">{summary.per_request}</span>
 				</div>
 				<div className="flex flex-col items-center">
-					<span className="text-[10px] text-zinc-500">Stuck</span>
+					<span className="text-[10px] text-zinc-500">{t("devProfiler.stuck")}</span>
 					<span className={`font-semibold ${summary.potentially_stuck > 0 ? "text-red-400" : "text-zinc-500"}`}>
 						{summary.potentially_stuck}
 					</span>
@@ -225,15 +228,15 @@ function GoroutineHealthSection({
 			{(problemGoroutines.length > 0 || skippedGoroutines.size > 0) && (
 				<div className="space-y-1">
 					<div className="flex items-center justify-between">
-						<span className="text-[10px] text-zinc-500">Potential Leaks</span>
+						<span className="text-[10px] text-zinc-500">{t("devProfiler.potentialLeaks")}</span>
 						{skippedGoroutines.size > 0 && (
 							<button
 								onClick={onClearSkipped}
 								className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-								title="Clear all hidden goroutines"
+								title={t("devProfiler.clearHidden")}
 							>
 								<RotateCcw className="h-2.5 w-2.5" />
-								{skippedGoroutines.size} hidden
+								{t("devProfiler.hidden", { count: skippedGoroutines.size })}
 							</button>
 						)}
 					</div>
@@ -266,7 +269,9 @@ function GoroutineHealthSection({
 									<div className="flex items-center gap-2 pl-5 text-[10px]">
 										<span className={`rounded px-1 py-0.5 ${getCategoryColor(g.category)}`}>{g.category}</span>
 										<span className="text-zinc-500">{g.count}x</span>
-										{g.wait_minutes != null && <span className="text-amber-400">{g.wait_minutes}m waiting</span>}
+										{g.wait_minutes != null && (
+											<span className="text-amber-400">{t("devProfiler.waiting", { count: g.wait_minutes })}</span>
+										)}
 									</div>
 								</div>
 								<button
@@ -276,17 +281,17 @@ function GoroutineHealthSection({
 										if (filePath) onSkipGoroutine(filePath);
 									}}
 									className="absolute top-1.5 right-1 shrink-0 rounded p-1 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-600 hover:text-zinc-300"
-									title="Hide goroutines from this file"
+									title={t("devProfiler.hideFromFile")}
 								>
 									<EyeOff className="h-3 w-3" />
 								</button>
 								{expandedGoroutines.has(gid) && (
 									<div className="border-t border-zinc-700 bg-zinc-900/50 px-2 py-1.5">
 										<div className="mb-1 text-[10px] text-zinc-500">
-											State: <span className="text-zinc-400">{g.state}</span>
+											{t("devProfiler.state")}: <span className="text-zinc-400">{g.state}</span>
 											{g.wait_reason && (
 												<span className="ml-2">
-													Wait: <span className="text-amber-400">{g.wait_reason}</span>
+													{t("devProfiler.wait")}: <span className="text-amber-400">{g.wait_reason}</span>
 												</span>
 											)}
 										</div>
@@ -296,7 +301,9 @@ function GoroutineHealthSection({
 													{line}
 												</div>
 											))}
-											{g.stack.length > 10 && <div className="text-[9px] text-zinc-600">... {g.stack.length - 10} more frames</div>}
+											{g.stack.length > 10 && (
+												<div className="text-[9px] text-zinc-600">{t("devProfiler.moreFrames", { count: g.stack.length - 10 })}</div>
+											)}
 										</div>
 									</div>
 								)}
@@ -305,17 +312,22 @@ function GoroutineHealthSection({
 					})}
 
 					{problemGoroutines.length === 0 && skippedGoroutines.size > 0 && (
-						<div className="rounded bg-zinc-800/30 py-2 text-center text-[10px] text-zinc-500">All potential leaks hidden</div>
+						<div className="rounded bg-zinc-800/30 py-2 text-center text-[10px] text-zinc-500">
+							{t("devProfiler.allPotentialLeaksHidden")}
+						</div>
 					)}
 					{problemGoroutines.length === 0 &&
 						skippedGoroutines.size === 0 &&
 						(summary.long_waiting > 0 || summary.potentially_stuck > 0) && (
 							<div className="rounded bg-zinc-800/30 px-2 py-2 text-center text-[10px] text-zinc-500">
 								{summary.long_waiting > 0 && summary.potentially_stuck > 0
-									? `${summary.long_waiting} long-waiting and ${summary.potentially_stuck} stuck goroutines (background workers filtered)`
+									? t("devProfiler.longWaitingAndStuck", {
+											longWaiting: summary.long_waiting,
+											stuck: summary.potentially_stuck,
+										})
 									: summary.long_waiting > 0
-										? `${summary.long_waiting} long-waiting goroutines (background workers filtered)`
-										: `${summary.potentially_stuck} stuck goroutines (background workers filtered)`}
+										? t("devProfiler.longWaiting", { count: summary.long_waiting })
+										: t("devProfiler.stuckFiltered", { count: summary.potentially_stuck })}
 							</div>
 						)}
 				</div>
@@ -323,13 +335,14 @@ function GoroutineHealthSection({
 
 			{/* No problems message */}
 			{problemGoroutines.length === 0 && summary.long_waiting === 0 && summary.potentially_stuck === 0 && (
-				<div className="rounded bg-zinc-800/30 py-2 text-center text-[10px] text-zinc-500">No goroutine leaks detected</div>
+				<div className="rounded bg-zinc-800/30 py-2 text-center text-[10px] text-zinc-500">{t("devProfiler.noLeaks")}</div>
 			)}
 		</div>
 	);
 }
 
 export function DevProfiler(): React.ReactNode {
+	const { t } = useTranslation();
 	const [isVisible, setIsVisible] = useState<boolean>(() => loadBooleanFromStorage(PROFILER_VISIBLE_KEY, true));
 	const [isExpanded, setIsExpanded] = useState<boolean>(() => loadBooleanFromStorage(PROFILER_EXPANDED_KEY, true));
 	const [isDismissed, setIsDismissed] = useState(false);
@@ -463,7 +476,7 @@ export function DevProfiler(): React.ReactNode {
 			<button
 				onClick={handleToggleVisible}
 				className="fixed right-4 bottom-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg transition-all hover:bg-zinc-800"
-				title="Show Dev Profiler"
+				title={t("devProfiler.show")}
 			>
 				<Activity className="h-5 w-5" />
 			</button>
@@ -475,54 +488,58 @@ export function DevProfiler(): React.ReactNode {
 			{/* Header */}
 			<div className="flex items-center justify-between border-b border-zinc-700 bg-zinc-800 px-3 py-2">
 				<div className="flex items-center gap-2">
-					<span className="font-semibold text-emerald-400">Dev Profiler</span>
+					<span className="font-semibold text-emerald-400">{t("devProfiler.title")}</span>
 					{isLoading && <span className="ml-2 h-2 w-2 animate-pulse rounded-full bg-amber-400" />}
 				</div>
 				<div className="flex items-center gap-1">
 					<button
 						onClick={handleToggleExpand}
 						className="rounded p-1 transition-colors hover:bg-zinc-700"
-						title={isExpanded ? "Collapse" : "Expand"}
+						title={isExpanded ? t("devProfiler.collapse") : t("devProfiler.expand")}
 					>
 						{isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
 					</button>
-					<button onClick={handleToggleVisible} className="rounded p-1 transition-colors hover:bg-zinc-700" title="Minimize">
+					<button
+						onClick={handleToggleVisible}
+						className="rounded p-1 transition-colors hover:bg-zinc-700"
+						title={t("devProfiler.minimize")}
+					>
 						<ChevronDown className="h-4 w-4" />
 					</button>
-					<button onClick={handleDismiss} className="rounded p-1 transition-colors hover:bg-zinc-700" title="Dismiss">
+					<button onClick={handleDismiss} className="rounded p-1 transition-colors hover:bg-zinc-700" title={t("devProfiler.dismiss")}>
 						<X className="h-4 w-4" />
 					</button>
 				</div>
 			</div>
 
-			{Boolean(error) && <div className="border-b border-zinc-700 bg-red-900/30 px-3 py-2 text-red-300">Failed to load profiling data</div>}
+			{Boolean(error) && <div className="border-b border-zinc-700 bg-red-900/30 px-3 py-2 text-red-300">{t("devProfiler.loadError")}</div>}
 
 			{isExpanded && data && (
 				<div className="custom-scrollbar max-h-[70vh] overflow-x-hidden overflow-y-auto">
 					{/* Current Stats */}
 					<div className="grid grid-cols-3 gap-2 border-b border-zinc-700 p-3">
 						<div className="flex flex-col">
-							<span className="text-zinc-500">CPU Usage</span>
+							<span className="text-zinc-500">{t("devProfiler.cpuUsage")}</span>
 							<span className="font-semibold text-orange-400">{data.cpu.usage_percent.toFixed(1)}%</span>
 						</div>
 						<div className="flex flex-col">
-							<span className="text-zinc-500">Heap Alloc</span>
+							<span className="text-zinc-500">{t("devProfiler.heapAlloc")}</span>
 							<span className="font-semibold text-cyan-400">{formatBytes(data.memory.alloc)}</span>
 						</div>
 						<div className="flex flex-col">
-							<span className="text-zinc-500">Heap In-Use</span>
+							<span className="text-zinc-500">{t("devProfiler.heapInUse")}</span>
 							<span className="font-semibold text-blue-400">{formatBytes(data.memory.heap_inuse)}</span>
 						</div>
 						<div className="flex flex-col">
-							<span className="text-zinc-500">System</span>
+							<span className="text-zinc-500">{t("devProfiler.system")}</span>
 							<span className="font-semibold text-purple-400">{formatBytes(data.memory.sys)}</span>
 						</div>
 						<div className="flex flex-col">
-							<span className="text-zinc-500">Goroutines</span>
+							<span className="text-zinc-500">{t("devProfiler.goroutines")}</span>
 							<span className="font-semibold text-emerald-400">{data.runtime.num_goroutine}</span>
 						</div>
 						<div className="flex flex-col">
-							<span className="text-zinc-500">GC Pause</span>
+							<span className="text-zinc-500">{t("devProfiler.gcPause")}</span>
 							<span className="font-semibold text-amber-400">{formatNs(data.runtime.gc_pause_ns)}</span>
 						</div>
 					</div>
@@ -531,7 +548,7 @@ export function DevProfiler(): React.ReactNode {
 					<div className="border-b border-zinc-700 p-3">
 						<div className="mb-2 flex items-center gap-2">
 							<Cpu className="h-3 w-3 text-orange-400" />
-							<span className="text-zinc-400">CPU Usage (last 5 min)</span>
+							<span className="text-zinc-400">{t("devProfiler.cpuUsageLast5Min")}</span>
 						</div>
 						<div className="h-24">
 							<ResponsiveContainer width="100%" height="100%">
@@ -590,7 +607,7 @@ export function DevProfiler(): React.ReactNode {
 										strokeWidth={1.5}
 										fill="url(#goroutineGradient)"
 										yAxisId="right"
-										name="Goroutines"
+										name={t("devProfiler.goroutines")}
 									/>
 								</AreaChart>
 							</ResponsiveContainer>
@@ -602,7 +619,7 @@ export function DevProfiler(): React.ReactNode {
 							</span>
 							<span className="flex items-center gap-1">
 								<span className="h-2 w-2 rounded-full bg-emerald-400" />
-								Goroutines
+								{t("devProfiler.goroutines")}
 							</span>
 						</div>
 					</div>
@@ -611,7 +628,7 @@ export function DevProfiler(): React.ReactNode {
 					<div className="border-b border-zinc-700 p-3">
 						<div className="mb-2 flex items-center gap-2">
 							<HardDrive className="h-3 w-3 text-cyan-400" />
-							<span className="text-zinc-400">Memory (last 5 min)</span>
+							<span className="text-zinc-400">{t("devProfiler.memoryLast5Min")}</span>
 						</div>
 						<div className="h-24">
 							<ResponsiveContainer width="100%" height="100%">
@@ -644,14 +661,21 @@ export function DevProfiler(): React.ReactNode {
 										}}
 										labelStyle={{ color: "#a1a1aa" }}
 									/>
-									<Area type="monotone" dataKey="alloc" stroke="#22d3ee" strokeWidth={1.5} fill="url(#allocGradient)" name="Alloc" />
+									<Area
+										type="monotone"
+										dataKey="alloc"
+										stroke="#22d3ee"
+										strokeWidth={1.5}
+										fill="url(#allocGradient)"
+										name={t("devProfiler.alloc")}
+									/>
 									<Area
 										type="monotone"
 										dataKey="heapInuse"
 										stroke="#3b82f6"
 										strokeWidth={1.5}
 										fill="url(#heapGradient)"
-										name="Heap In-Use"
+										name={t("devProfiler.heapInUse")}
 									/>
 								</AreaChart>
 							</ResponsiveContainer>
@@ -659,11 +683,11 @@ export function DevProfiler(): React.ReactNode {
 						<div className="mt-1 flex gap-4 text-[10px]">
 							<span className="flex items-center gap-1">
 								<span className="h-2 w-2 rounded-full bg-cyan-400" />
-								Alloc
+								{t("devProfiler.alloc")}
 							</span>
 							<span className="flex items-center gap-1">
 								<span className="h-2 w-2 rounded-full bg-blue-500" />
-								Heap In-Use
+								{t("devProfiler.heapInUse")}
 							</span>
 						</div>
 					</div>
@@ -672,7 +696,7 @@ export function DevProfiler(): React.ReactNode {
 					<div className="border-b border-zinc-700 p-3">
 						<div className="mb-2 flex items-center gap-2">
 							<HardDrive className="h-3 w-3 text-rose-400" />
-							<span className="text-zinc-400">Top Allocations</span>
+							<span className="text-zinc-400">{t("devProfiler.topAllocations")}</span>
 						</div>
 						<div className="space-y-1">
 							{(data.top_allocations ?? []).map((alloc, i) => (
@@ -687,7 +711,7 @@ export function DevProfiler(): React.ReactNode {
 									</div>
 									<div className="flex flex-col items-end">
 										<span className="text-rose-400">{formatBytes(alloc.bytes)}</span>
-										<span className="text-[10px] text-zinc-500">{alloc.count.toLocaleString()} allocs</span>
+										<span className="text-[10px] text-zinc-500">{t("devProfiler.allocs", { count: alloc.count.toLocaleString() })}</span>
 									</div>
 								</div>
 							))}
@@ -709,8 +733,8 @@ export function DevProfiler(): React.ReactNode {
 
 					{/* Footer with info */}
 					<div className="border-t border-zinc-700 bg-zinc-800 px-3 py-2 text-[10px] text-zinc-500">
-						CPUs: {data.runtime.num_cpu} | GOMAXPROCS: {data.runtime.gomaxprocs} | GC: {data.runtime.num_gc} | Objects:{" "}
-						{data.memory.heap_objects.toLocaleString()}
+						{t("devProfiler.cpus")}: {data.runtime.num_cpu} | GOMAXPROCS: {data.runtime.gomaxprocs} | GC: {data.runtime.num_gc} |{" "}
+						{t("devProfiler.objects")}: {data.memory.heap_objects.toLocaleString()}
 					</div>
 				</div>
 			)}
@@ -719,8 +743,12 @@ export function DevProfiler(): React.ReactNode {
 			{!isExpanded && data && (
 				<div className="flex items-center justify-between bg-zinc-800/50 px-3 py-2">
 					<span className="text-orange-400">CPU: {data.cpu.usage_percent.toFixed(1)}%</span>
-					<span className="text-zinc-400">Heap: {formatBytes(data.memory.heap_inuse)}</span>
-					<span className="text-zinc-400">Goroutines: {data.runtime.num_goroutine}</span>
+					<span className="text-zinc-400">
+						{t("devProfiler.heap")}: {formatBytes(data.memory.heap_inuse)}
+					</span>
+					<span className="text-zinc-400">
+						{t("devProfiler.goroutines")}: {data.runtime.num_goroutine}
+					</span>
 				</div>
 			)}
 		</div>

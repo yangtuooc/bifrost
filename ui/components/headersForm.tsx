@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface HeadersFormProps {
 	// Required keys — admin-declared, immutable in this form. Labels and
@@ -69,16 +70,20 @@ export default function HeadersForm({
 	onTest,
 	onSubmit,
 	busy = false,
-	submitLabel = "Submit",
-	testLabel = "Test",
+	submitLabel,
+	testLabel,
 	initialValues,
 	testIdPrefix = "headers-form",
 	hideSubmit = false,
 	onCancel,
-	cancelLabel = "Cancel",
+	cancelLabel,
 }: HeadersFormProps) {
+	const { t } = useTranslation();
 	const [values, setValues] = useState<Record<string, string>>(() => buildInitialValues(requiredKeys, initialValues));
 	const [reveal, setReveal] = useState<Record<string, boolean>>({});
+	const resolvedSubmitLabel = submitLabel ?? t("headersForm.actions.submit");
+	const resolvedTestLabel = testLabel ?? t("headersForm.actions.test");
+	const resolvedCancelLabel = cancelLabel ?? t("common.actions.cancel");
 
 	// If the schema changes mid-form (e.g. admin adds a key), reset state
 	// so we don't leak stale entries for removed keys.
@@ -119,17 +124,14 @@ export default function HeadersForm({
 			{adminHeaderKeys && adminHeaderKeys.length > 0 && (
 				<div className="border-muted-foreground/20 bg-muted/40 rounded-md border p-3">
 					<div className="flex items-center gap-1.5">
-						<p className="text-muted-foreground text-xs font-medium">Static admin headers</p>
+						<p className="text-muted-foreground text-xs font-medium">{t("headersForm.staticAdminHeaders")}</p>
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<Info className="text-muted-foreground size-3" />
 								</TooltipTrigger>
 								<TooltipContent className="max-w-xs">
-									<p>
-										These headers are set by the admin on the MCP client and accompany every request alongside your submitted values. You
-										can&apos;t edit them here.
-									</p>
+									<p>{t("headersForm.staticAdminHeadersTooltip")}</p>
 								</TooltipContent>
 							</Tooltip>
 						</TooltipProvider>
@@ -146,7 +148,7 @@ export default function HeadersForm({
 
 			<div className="space-y-3">
 				{requiredKeys.length === 0 ? (
-					<p className="text-muted-foreground text-sm">No header keys have been declared on this MCP client.</p>
+					<p className="text-muted-foreground text-sm">{t("headersForm.noHeaderKeys")}</p>
 				) : (
 					requiredKeys.map((key) => {
 						const isRevealed = reveal[key] === true;
@@ -157,7 +159,7 @@ export default function HeadersForm({
 									<Label htmlFor={`${testIdPrefix}-${key}`} className="font-mono text-xs">
 										{key}
 									</Label>
-									{wasSubmitted && <span className="text-muted-foreground text-xs">Previously submitted</span>}
+									{wasSubmitted && <span className="text-muted-foreground text-xs">{t("headersForm.previouslySubmitted")}</span>}
 								</div>
 								<div className="relative">
 									<Input
@@ -166,7 +168,7 @@ export default function HeadersForm({
 										autoComplete="off"
 										value={values[key] ?? ""}
 										onChange={(e) => handleChange(key, e.target.value)}
-										placeholder={wasSubmitted ? "•••••• (enter new value to overwrite)" : `Value for ${key}`}
+										placeholder={wasSubmitted ? t("headersForm.placeholder.overwrite") : t("headersForm.placeholder.valueFor", { key })}
 										disabled={busy}
 										data-testid={`${testIdPrefix}-input-${key}`}
 									/>
@@ -174,7 +176,7 @@ export default function HeadersForm({
 										type="button"
 										onClick={() => setReveal((r) => ({ ...r, [key]: !r[key] }))}
 										className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-										aria-label={isRevealed ? "Hide value" : "Show value"}
+										aria-label={isRevealed ? t("headersForm.actions.hideValue") : t("headersForm.actions.showValue")}
 										data-testid={`${testIdPrefix}-reveal-${key}`}
 									>
 										{isRevealed ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
@@ -189,7 +191,7 @@ export default function HeadersForm({
 			<div className="flex items-center justify-end gap-2 pt-2">
 				{onCancel && (
 					<Button type="button" variant="outline" onClick={onCancel} disabled={busy} data-testid={`${testIdPrefix}-cancel-btn`}>
-						{cancelLabel}
+						{resolvedCancelLabel}
 					</Button>
 				)}
 				{onTest && (
@@ -201,13 +203,13 @@ export default function HeadersForm({
 						data-testid={`${testIdPrefix}-test-btn`}
 					>
 						{busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-						{testLabel}
+						{resolvedTestLabel}
 					</Button>
 				)}
 				{!hideSubmit && (
 					<Button type="submit" disabled={!canSubmit || busy || requiredKeys.length === 0} data-testid={`${testIdPrefix}-submit-btn`}>
 						{busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-						{submitLabel}
+						{resolvedSubmitLabel}
 					</Button>
 				)}
 			</div>

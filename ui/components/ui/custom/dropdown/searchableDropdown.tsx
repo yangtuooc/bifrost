@@ -3,6 +3,7 @@ import { CustomDropdown } from "./dropdown";
 import { DropdownOption } from "./types";
 import { cn } from "@/lib/utils";
 import { Icons } from "../../icons";
+import { useTranslation } from "react-i18next";
 
 const EMPTY_SELECTED_VALUES: ReadonlyArray<DropdownOption<unknown>> = [];
 interface SearchableDropdownProps<T = {}> {
@@ -35,9 +36,9 @@ export function SearchableDropdown<T = {}>({
 	style,
 	emptyViewText,
 	groupHeadingClassName,
-	searchPlaceholder = "Search",
+	searchPlaceholder,
 	searchClassName,
-	noResultsText = "No results found",
+	noResultsText,
 	maxHeight = "300px",
 	dropdownClassName,
 	removeEmptyGroups,
@@ -45,8 +46,11 @@ export function SearchableDropdown<T = {}>({
 	selectedValues,
 	...props
 }: SearchableDropdownProps<T>) {
+	const { t } = useTranslation();
 	const [searchTerm, setSearchTerm] = useState("");
 	const selectedValuesSafe = selectedValues ?? EMPTY_SELECTED_VALUES;
+	const resolvedSearchPlaceholder = searchPlaceholder ?? t("common.select.searchPlaceholder");
+	const resolvedNoResultsText = noResultsText ?? t("common.select.noResults");
 
 	const filteredOptions = useMemo(() => {
 		const searchTermLower = searchTerm.toLowerCase();
@@ -126,11 +130,11 @@ export function SearchableDropdown<T = {}>({
 				<input
 					autoFocus
 					type="text"
-					placeholder={searchPlaceholder}
+					placeholder={resolvedSearchPlaceholder}
 					value={searchTerm}
 					onChange={handleSearchChange}
 					onKeyDown={handleSearchKeyDown}
-					aria-label={searchPlaceholder}
+					aria-label={resolvedSearchPlaceholder}
 					className={cn(
 						"w-full rounded-md border border-gray-300 py-2 pr-3 pl-10 text-sm",
 						"focus:outline-none",
@@ -147,7 +151,7 @@ export function SearchableDropdown<T = {}>({
 					defaultValue={defaultValue}
 					value={value}
 					selectFirstOptionByDefault={selectFirstOptionByDefault}
-					emptyViewText={filteredOptions.length === 0 && searchTerm ? noResultsText : emptyViewText}
+					emptyViewText={filteredOptions.length === 0 && searchTerm ? resolvedNoResultsText : emptyViewText}
 					groupHeadingClassName={groupHeadingClassName}
 					className={cn("border-0 p-0", dropdownClassName)}
 					{...props}

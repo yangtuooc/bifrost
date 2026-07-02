@@ -29,18 +29,45 @@ import { getScopeLabel } from "@/lib/utils/labels";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Edit, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import ModelLimitSheet from "./modelLimitSheet";
 import { ModelLimitsEmptyState } from "./modelLimitsEmptyState";
-// Side-effect import: pull in downstream scope registrations (enterprise
-// "user" deep-link, etc.). No-op for OSS builds.
+// 副作用导入：加载下游 scope 注册，OSS 构建中为空模块。
 import "@enterprise/lib/registrations/modelLimitScopes";
 import { PIN_SHADOW_RIGHT } from "@/components/table/columnPinning";
 import { useNavigate } from "@tanstack/react-router";
 
-// Helper to format reset duration for display
-const formatResetDuration = (duration: string) => {
-	return resetDurationLabels[duration] || duration;
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+const resetDurationLabelKeys: Record<string, string> = {
+	"1m": "common.resetDurations.everyMinute",
+	"5m": "common.resetDurations.everyFiveMinutes",
+	"15m": "common.resetDurations.everyFifteenMinutes",
+	"30m": "common.resetDurations.everyThirtyMinutes",
+	"1h": "common.resetDurations.hourly",
+	"6h": "common.resetDurations.everySixHours",
+	"1d": "common.resetDurations.daily",
+	"1w": "common.resetDurations.weekly",
+	"1M": "common.resetDurations.monthly",
+};
+
+const scopeLabelKeys: Record<string, string> = {
+	global: "modelLimits.scopes.global",
+	virtual_key: "modelLimits.scopes.virtualKey",
+	team: "modelLimits.scopes.team",
+	customer: "modelLimits.scopes.customer",
+	user: "modelLimits.scopes.user",
+};
+
+const formatResetDuration = (duration: string, t: Translate) => {
+	const key = resetDurationLabelKeys[duration];
+	return key ? t(key) : resetDurationLabels[duration] || duration;
+};
+
+const formatScopeLabel = (scope: string, fallbackLabel: string, t: Translate) => {
+	const key = scopeLabelKeys[scope];
+	return key ? t(key) : fallbackLabel;
 };
 
 const toTestIdPart = (value: string) =>
@@ -62,6 +89,7 @@ function ModelLimitActionsMenu({
 	onEdit: (config: ModelConfig) => void;
 	onDelete: (configId: string) => void;
 }) {
+	const { t } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
@@ -71,7 +99,7 @@ function ModelLimitActionsMenu({
 					variant="ghost"
 					size="icon"
 					className="h-8 w-8"
-					aria-label={`Actions for model limit ${config.model_name}`}
+					aria-label={t("modelLimits.actionsMenu.aria", { model: config.model_name })}
 					data-testid={`model-limit-button-actions-${toTestIdPart(config.model_name)}-${toTestIdPart(config.provider || "all")}`}
 				>
 					<MoreHorizontal className="h-4 w-4" />
@@ -89,7 +117,7 @@ function ModelLimitActionsMenu({
 					}}
 				>
 					<Edit className="h-4 w-4" />
-					Edit
+					{t("common.actions.edit")}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					variant="destructive"
@@ -103,7 +131,7 @@ function ModelLimitActionsMenu({
 					}}
 				>
 					<Trash2 className="h-4 w-4" />
-					Delete
+					{t("common.actions.delete")}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
@@ -143,12 +171,13 @@ export default function ModelLimitsTable({
 	onOffsetChange,
 	isLoading = false,
 }: ModelLimitsTableProps) {
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [showModelLimitSheet, setShowModelLimitSheet] = useState(false);
 	const [editingModelConfigId, setEditingModelConfigId] = useState<string | null>(null);
 	const [deleteModelConfigId, setDeleteModelConfigId] = useState<string | null>(null);
 
-	// Derive editingModelConfig from props so it stays in sync with RTK cache updates
+	// 从 props 派生当前编辑对象，确保它和 RTK cache 更新保持同步。
 	const editingModelConfig = useMemo(
 		() => (editingModelConfigId ? (modelConfigs.find((mc) => mc.id === editingModelConfigId) ?? null) : null),
 		[editingModelConfigId, modelConfigs],
@@ -167,7 +196,7 @@ export default function ModelLimitsTable({
 	const handleDelete = async (id: string) => {
 		try {
 			await deleteModelConfig(id).unwrap();
-			toast.success("Model limit deleted successfully");
+			toast.success(t("modelLimits.toasts.deleted"));
 			setDeleteModelConfigId(null);
 		} catch (error) {
 			toast.error(getErrorMessage(error));
@@ -191,9 +220,8 @@ export default function ModelLimitsTable({
 
 	const hasActiveFilters = debouncedSearch || scope || provider;
 
-	// True empty state: no model limits at all (not just filtered to zero).
-	// Suppress while the initial load is in flight so we don't flash the empty
-	// state before the API responds.
+	// 真空态：完全没有模型限制，而不是筛选结果为空。
+	// 初次加载期间不展示空态，避免 API 响应前闪烁。
 	if (totalCount === 0 && !hasActiveFilters && !isLoading) {
 		return (
 			<>
@@ -213,23 +241,24 @@ export default function ModelLimitsTable({
 			<AlertDialog open={!!deletingModelConfig} onOpenChange={(open) => !open && setDeleteModelConfigId(null)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Delete Model Limit</AlertDialogTitle>
+						<AlertDialogTitle>{t("modelLimits.deleteDialog.title")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							Are you sure you want to delete the limit for &quot;
-							{deletingModelConfig?.model_name && deletingModelConfig.model_name.length > 30
-								? `${deletingModelConfig.model_name.slice(0, 30)}...`
-								: deletingModelConfig?.model_name}
-							&quot;? This action cannot be undone.
+							{t("modelLimits.deleteDialog.description", {
+								model:
+									deletingModelConfig?.model_name && deletingModelConfig.model_name.length > 30
+										? `${deletingModelConfig.model_name.slice(0, 30)}...`
+										: deletingModelConfig?.model_name,
+							})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={() => deletingModelConfig && handleDelete(deletingModelConfig.id)}
 							disabled={isDeleting}
 							className="bg-red-600 hover:bg-red-700"
 						>
-							{isDeleting ? "Deleting..." : "Delete"}
+							{isDeleting ? t("common.actions.deleting") : t("common.actions.delete")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
@@ -238,24 +267,22 @@ export default function ModelLimitsTable({
 			<div className="flex flex-col overflow-y-auto">
 				<div className="mb-4 flex items-center justify-between">
 					<div>
-						<h1 className="text-lg font-semibold">Model Limits</h1>
-						<p className="text-muted-foreground text-sm">
-							Configure budgets and rate limits at the model level. For provider-specific limits, visit each provider&apos;s settings.
-						</p>
+						<h1 className="text-lg font-semibold">{t("modelLimits.title")}</h1>
+						<p className="text-muted-foreground text-sm">{t("modelLimits.description")}</p>
 					</div>
 					<Button onClick={handleAddModelLimit} disabled={!hasCreateAccess} data-testid="model-limits-button-create">
 						<Plus className="h-4 w-4" />
-						Add Model Limit
+						{t("modelLimits.add")}
 					</Button>
 				</div>
 
-				{/* Toolbar: Search + Filters */}
+				{/* 工具栏：搜索和筛选 */}
 				<div className="mb-4 flex flex-wrap items-center gap-3">
 					<div className="relative min-w-[220px] flex-1">
 						<Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
-							aria-label="Search model limits by model name"
-							placeholder="Search by model name..."
+							aria-label={t("modelLimits.filters.searchAria")}
+							placeholder={t("modelLimits.filters.searchPlaceholder")}
 							value={search}
 							onChange={(e) => onSearchChange(e.target.value)}
 							className="pl-9"
@@ -265,13 +292,13 @@ export default function ModelLimitsTable({
 
 					<Select value={scope || "all"} onValueChange={(v) => onScopeChange(v === "all" ? "" : v)}>
 						<SelectTrigger className="w-[160px]" data-testid="model-limits-filter-scope">
-							<SelectValue placeholder="All Scopes" />
+							<SelectValue placeholder={t("modelLimits.filters.allScopes")} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Scopes</SelectItem>
+							<SelectItem value="all">{t("modelLimits.filters.allScopes")}</SelectItem>
 							{getModelLimitScopes().map((o) => (
 								<SelectItem key={o.value} value={o.value}>
-									{o.label}
+									{formatScopeLabel(o.value, o.label, t)}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -279,10 +306,10 @@ export default function ModelLimitsTable({
 
 					<Select value={provider || "all"} onValueChange={(v) => onProviderChange(v === "all" ? "" : v)}>
 						<SelectTrigger className="w-[160px]" data-testid="model-limits-filter-provider">
-							<SelectValue placeholder="All Providers" />
+							<SelectValue placeholder={t("common.filters.allProviders")} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Providers</SelectItem>
+							<SelectItem value="all">{t("common.filters.allProviders")}</SelectItem>
 							{(providers ?? []).map((p) => (
 								<SelectItem key={p.name} value={p.name}>
 									<div className="flex items-center gap-2">
@@ -305,7 +332,7 @@ export default function ModelLimitsTable({
 							}}
 							data-testid="model-limits-filter-clear"
 						>
-							Clear filters
+							{t("modelLimits.filters.clear")}
 						</Button>
 					)}
 				</div>
@@ -314,12 +341,12 @@ export default function ModelLimitsTable({
 					<Table containerClassName="h-full overflow-auto">
 						<TableHeader className="bg-muted sticky top-0 z-10">
 							<TableRow className="hover:bg-transparent">
-								<TableHead className="font-medium">Model</TableHead>
-								<TableHead className="font-medium">Provider</TableHead>
-								<TableHead className="font-medium">Scope</TableHead>
-								<TableHead className="font-medium">Scope Target</TableHead>
-								<TableHead className="font-medium">Budget</TableHead>
-								<TableHead className="font-medium">Rate Limit</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.model")}</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.provider")}</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.scope")}</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.scopeTarget")}</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.budget")}</TableHead>
+								<TableHead className="font-medium">{t("modelLimits.table.rateLimit")}</TableHead>
 								<TableHead className={`bg-muted sticky right-0 z-30 w-[50px] text-right ${PIN_SHADOW_RIGHT}`}></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -328,13 +355,13 @@ export default function ModelLimitsTable({
 								<TableRow>
 									<TableCell colSpan={7} className="h-24 text-center">
 										<span className="text-muted-foreground text-sm">
-											{isLoading ? "Loading model limits..." : "No matching model limits found."}
+											{isLoading ? t("modelLimits.table.loading") : t("modelLimits.table.noMatching")}
 										</span>
 									</TableCell>
 								</TableRow>
 							) : (
 								modelConfigs.map((config) => {
-									// Model configs can own multiple budgets; show all (like the VK table).
+									// 模型配置可以拥有多个预算，和 VK 表格一样全部展示。
 									const budgets = config.budgets ?? (config.budget ? [config.budget] : []);
 									const isBudgetExhausted = budgets.some((b) => b.max_limit > 0 && b.current_usage >= b.max_limit);
 									const isRateLimitExhausted =
@@ -346,7 +373,7 @@ export default function ModelLimitsTable({
 											config.rate_limit.request_current_usage >= config.rate_limit.request_max_limit);
 									const isExhausted = isBudgetExhausted || isRateLimitExhausted;
 
-									// Compute safe percentages to avoid division by zero
+									// 计算安全百分比，避免除以零。
 									const tokenPercentage =
 										config.rate_limit?.token_max_limit && config.rate_limit.token_max_limit > 0
 											? Math.min((config.rate_limit.token_current_usage / config.rate_limit.token_max_limit) * 100, 100)
@@ -365,11 +392,11 @@ export default function ModelLimitsTable({
 											<TableCell className="max-w-[280px] py-4">
 												<div className="flex flex-col gap-2">
 													<span className="truncate font-mono text-sm font-medium">
-														{config.model_name === "*" ? "All Models" : config.model_name}
+														{config.model_name === "*" ? t("common.filters.allModels") : config.model_name}
 													</span>
 													{isExhausted && (
 														<Badge variant="destructive" className="w-fit text-xs">
-															Limit Reached
+															{t("modelLimits.table.limitReached")}
 														</Badge>
 													)}
 												</div>
@@ -381,11 +408,13 @@ export default function ModelLimitsTable({
 														<span className="text-sm">{ProviderLabels[config.provider as ProviderName] || config.provider}</span>
 													</div>
 												) : (
-													<span className="text-muted-foreground text-sm">All Providers</span>
+													<span className="text-muted-foreground text-sm">{t("common.filters.allProviders")}</span>
 												)}
 											</TableCell>
 											<TableCell>
-												<Badge variant="secondary">{getScopeLabel(config.scope ?? "global")}</Badge>
+												<Badge variant="secondary">
+													{formatScopeLabel(config.scope ?? "global", getScopeLabel(config.scope ?? "global"), t)}
+												</Badge>
 											</TableCell>
 											<TableCell>
 												{config.scope !== "global" && config.scope_id && config.scope_name ? (
@@ -424,8 +453,10 @@ export default function ModelLimitsTable({
 																	{formatCurrency(b.current_usage)} / {formatCurrency(b.max_limit)}
 																</span>
 																<span className="text-muted-foreground text-xs">
-																	Resets {formatResetDuration(b.reset_duration)}
-																	{config.calendar_aligned && supportsCalendarAlignment(b.reset_duration) && " (calendar)"}
+																	{t("modelLimits.table.resets", { duration: formatResetDuration(b.reset_duration, t) })}
+																	{config.calendar_aligned &&
+																		supportsCalendarAlignment(b.reset_duration) &&
+																		t("modelLimits.table.calendarSuffix")}
 																</span>
 															</div>
 														))}
@@ -443,9 +474,11 @@ export default function ModelLimitsTable({
 																	<TooltipTrigger asChild>
 																		<div className="space-y-1.5">
 																			<div className="flex items-center justify-between gap-4 text-xs">
-																				<span className="font-medium">{config.rate_limit.token_max_limit.toLocaleString()} tokens</span>
+																				<span className="font-medium">
+																					{config.rate_limit.token_max_limit.toLocaleString()} {t("modelLimits.units.tokens")}
+																				</span>
 																				<span className="text-muted-foreground">
-																					{formatResetDuration(config.rate_limit.token_reset_duration || "1h")}
+																					{formatResetDuration(config.rate_limit.token_reset_duration || "1h", t)}
 																				</span>
 																			</div>
 																			<Progress
@@ -464,10 +497,12 @@ export default function ModelLimitsTable({
 																	<TooltipContent>
 																		<p className="font-medium">
 																			{config.rate_limit.token_current_usage.toLocaleString()} /{" "}
-																			{config.rate_limit.token_max_limit.toLocaleString()} tokens
+																			{config.rate_limit.token_max_limit.toLocaleString()} {t("modelLimits.units.tokens")}
 																		</p>
 																		<p className="text-primary-foreground/80 text-xs">
-																			Resets {formatResetDuration(config.rate_limit.token_reset_duration || "1h")}
+																			{t("modelLimits.table.resets", {
+																				duration: formatResetDuration(config.rate_limit.token_reset_duration || "1h", t),
+																			})}
 																		</p>
 																	</TooltipContent>
 																</Tooltip>
@@ -479,9 +514,11 @@ export default function ModelLimitsTable({
 																	<TooltipTrigger asChild>
 																		<div className="space-y-1.5">
 																			<div className="flex items-center justify-between gap-4 text-xs">
-																				<span className="font-medium">{config.rate_limit.request_max_limit.toLocaleString()} req</span>
+																				<span className="font-medium">
+																					{config.rate_limit.request_max_limit.toLocaleString()} {t("modelLimits.units.requestsShort")}
+																				</span>
 																				<span className="text-muted-foreground">
-																					{formatResetDuration(config.rate_limit.request_reset_duration || "1h")}
+																					{formatResetDuration(config.rate_limit.request_reset_duration || "1h", t)}
 																				</span>
 																			</div>
 																			<Progress
@@ -500,10 +537,12 @@ export default function ModelLimitsTable({
 																	<TooltipContent>
 																		<p className="font-medium">
 																			{config.rate_limit.request_current_usage.toLocaleString()} /{" "}
-																			{config.rate_limit.request_max_limit.toLocaleString()} requests
+																			{config.rate_limit.request_max_limit.toLocaleString()} {t("modelLimits.units.requests")}
 																		</p>
 																		<p className="text-primary-foreground/80 text-xs">
-																			Resets {formatResetDuration(config.rate_limit.request_reset_duration || "1h")}
+																			{t("modelLimits.table.resets", {
+																				duration: formatResetDuration(config.rate_limit.request_reset_duration || "1h", t),
+																			})}
 																		</p>
 																	</TooltipContent>
 																</Tooltip>
@@ -539,12 +578,15 @@ export default function ModelLimitsTable({
 					</Table>
 				</div>
 
-				{/* Pagination */}
+				{/* 分页 */}
 				{totalCount > 0 && (
 					<div className="flex shrink-0 items-center justify-between text-xs" data-testid="pagination">
 						<div className="text-muted-foreground flex items-center gap-2">
-							{(offset + 1).toLocaleString()}-{Math.min(offset + limit, totalCount).toLocaleString()} of {totalCount.toLocaleString()}{" "}
-							entries
+							{t("common.pagination.entriesRange", {
+								start: (offset + 1).toLocaleString(),
+								end: Math.min(offset + limit, totalCount).toLocaleString(),
+								total: totalCount.toLocaleString(),
+							})}
 						</div>
 
 						<div className="flex items-center gap-2">
@@ -554,15 +596,15 @@ export default function ModelLimitsTable({
 								onClick={() => onOffsetChange(Math.max(0, offset - limit))}
 								disabled={offset === 0}
 								data-testid="model-limits-pagination-prev-btn"
-								aria-label="Previous page"
+								aria-label={t("common.pagination.previousPage")}
 							>
 								<ChevronLeft className="size-3" />
 							</Button>
 
 							<div className="flex items-center gap-1">
-								<span>Page</span>
+								<span>{t("common.pagination.page")}</span>
 								<span>{Math.floor(offset / limit) + 1}</span>
-								<span>of {Math.ceil(totalCount / limit)}</span>
+								<span>{t("common.pagination.of", { total: Math.ceil(totalCount / limit) })}</span>
 							</div>
 
 							<Button
@@ -571,7 +613,7 @@ export default function ModelLimitsTable({
 								onClick={() => onOffsetChange(offset + limit)}
 								disabled={offset + limit >= totalCount}
 								data-testid="model-limits-pagination-next-btn"
-								aria-label="Next page"
+								aria-label={t("common.pagination.nextPage")}
 							>
 								<ChevronRight className="size-3" />
 							</Button>

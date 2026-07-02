@@ -7,6 +7,7 @@ import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { getExampleBaseUrl } from "@/lib/utils/port";
 import { AlertTriangle, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type Provider = "openai" | "anthropic" | "genai" | "litellm" | "langchain";
 type Language = "python" | "typescript";
@@ -74,6 +75,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ error }: EmptyStateProps) {
+	const { t } = useTranslation();
 	const [language, setLanguage] = useState<Language>("python");
 
 	// Generate examples dynamically using the port utility
@@ -244,28 +246,26 @@ const result = await chain.invoke({ input: "What is LangChain?" });`,
 			{error && (
 				<Alert>
 					<AlertTriangle className="h-4 w-4" />
-					<AlertDescription>
-						{isUnexpectedError ? "Looks like you haven't configured the log store in your config file." : error}
-					</AlertDescription>
+					<AlertDescription>{isUnexpectedError ? t("logs.empty.logStoreNotConfigured") : error}</AlertDescription>
 				</Alert>
 			)}
 
 			<div className="w-full space-y-6 p-4">
 				<div className="flex flex-row items-center gap-2">
 					<div>
-						<h3 className="text-lg font-semibold">Integrate under 60 seconds</h3>
-						<p className="text-muted-foreground text-sm">Send your first request to get started</p>
+						<h3 className="text-lg font-semibold">{t("logs.empty.title")}</h3>
+						<p className="text-muted-foreground text-sm">{t("logs.empty.description")}</p>
 					</div>
 				</div>
 
 				<Tabs defaultValue="curl" className="w-full rounded-lg border">
 					<TabsList className="grid h-10 w-full grid-cols-6 rounded-t-lg rounded-b-none">
-						<TabsTrigger value="curl">cURL</TabsTrigger>
-						<TabsTrigger value="openai">OpenAI SDK</TabsTrigger>
-						<TabsTrigger value="anthropic">Anthropic SDK</TabsTrigger>
-						<TabsTrigger value="genai">Google GenAI SDK</TabsTrigger>
-						<TabsTrigger value="litellm">LiteLLM SDK</TabsTrigger>
-						<TabsTrigger value="langchain">LangChain SDK</TabsTrigger>
+						<TabsTrigger value="curl">{t("logs.sdkTabs.curl")}</TabsTrigger>
+						<TabsTrigger value="openai">{t("logs.sdkTabs.openai")}</TabsTrigger>
+						<TabsTrigger value="anthropic">{t("logs.sdkTabs.anthropic")}</TabsTrigger>
+						<TabsTrigger value="genai">{t("logs.sdkTabs.genai")}</TabsTrigger>
+						<TabsTrigger value="litellm">{t("logs.sdkTabs.litellm")}</TabsTrigger>
+						<TabsTrigger value="langchain">{t("logs.sdkTabs.langchain")}</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="curl" className="px-4">

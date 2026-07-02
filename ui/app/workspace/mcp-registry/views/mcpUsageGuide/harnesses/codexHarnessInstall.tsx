@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { buildCodexConfig } from "../commandBuilders";
 import { HarnessCommandSection } from "../harnessCommandSection";
 import type { CodexConfigScope, HarnessInstallProps } from "../types";
@@ -13,6 +14,7 @@ export function CodexHarnessInstall({
 	serverScope,
 	virtualKey,
 }: HarnessInstallProps) {
+	const { t } = useTranslation();
 	const [configScope, setConfigScope] = useState<CodexConfigScope>("user");
 
 	const config = useMemo(() => {
@@ -37,17 +39,21 @@ export function CodexHarnessInstall({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="user">User</SelectItem>
-							<SelectItem value="project">Project</SelectItem>
+							<SelectItem value="user">{t("mcpRegistry.usageGuide.scopes.user")}</SelectItem>
+							<SelectItem value="project">{t("mcpRegistry.usageGuide.scopes.project")}</SelectItem>
 						</SelectContent>
 					</Select>
 				}
-				copySuccessMessage="Config copied"
-				emptyMessage={virtualKey ? "Select servers or use Gateway root." : "Select a virtual key to generate the config."}
+				copySuccessMessage={t("mcpRegistry.usageGuide.command.configCopied")}
+				emptyMessage={
+					virtualKey
+						? t("mcpRegistry.usageGuide.command.selectServersOrGateway")
+						: t("mcpRegistry.usageGuide.command.selectVirtualKeyForConfig")
+				}
 				harnessName="Codex"
 				label="config.toml"
 				logoSrc="/images/harness/codex.svg"
-				registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers)}`}
+				registrationLabel={`${configPath} · ${getRegistrationLabel(serverScope, selectedServers, t)}`}
 			/>
 		</div>
 	);

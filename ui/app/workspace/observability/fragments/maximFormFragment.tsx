@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 interface MaximFormFragmentProps {
 	initialConfig?: {
@@ -25,6 +26,7 @@ interface MaximFormFragmentProps {
 }
 
 export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting = false, isLoading = false }: MaximFormFragmentProps) {
+	const { t } = useTranslation();
 	const hasMaximAccess = useRbac(RbacResource.Observability, RbacOperation.Update);
 	const [showApiKey, setShowApiKey] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +50,13 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 		onSave(data).finally(() => setIsSaving(false));
 	};
 
+	const tooltipMessage =
+		!form.formState.isDirty && Object.keys(form.formState.errors).length > 0
+			? t("observability.common.noChangesAndValidationErrors")
+			: !form.formState.isDirty
+				? t("observability.common.noChanges")
+				: t("observability.common.fixValidationErrors");
+
 	useEffect(() => {
 		// Reset form with new initial config when it changes
 		form.reset({
@@ -70,12 +79,12 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							name="maxim_config.api_key"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>API Key</FormLabel>
+									<FormLabel>{t("observability.maxim.apiKey")}</FormLabel>
 									<FormControl>
 										<div className="relative">
 											<Input
 												type={showApiKey ? "text" : "password"}
-												placeholder="Enter your Maxim API key"
+												placeholder={t("observability.maxim.apiKeyPlaceholder")}
 												disabled={!hasMaximAccess}
 												{...field}
 												className="pr-10"
@@ -102,9 +111,17 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							name="maxim_config.log_repo_id"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Log Repository ID (Optional)</FormLabel>
+									<FormLabel>
+										{t("observability.maxim.logRepoId")}{" "}
+										<span className="text-muted-foreground font-normal">{t("observability.common.optionalSuffix")}</span>
+									</FormLabel>
 									<FormControl>
-										<Input placeholder="Enter log repository ID" disabled={!hasMaximAccess} {...field} value={field.value ?? ""} />
+										<Input
+											placeholder={t("observability.maxim.logRepoIdPlaceholder")}
+											disabled={!hasMaximAccess}
+											{...field}
+											value={field.value ?? ""}
+										/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -117,18 +134,14 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>
-										Request Headers <span className="text-muted-foreground font-normal">(Optional)</span>
+										{t("observability.maxim.requestHeaders")}{" "}
+										<span className="text-muted-foreground font-normal">{t("observability.common.optionalSuffix")}</span>
 									</FormLabel>
-									<FormDescription>
-										Comma-separated list of request headers to capture and attach as trace tags. Supports exact names and wildcard patterns
-										(e.g. <code className="text-xs">x-custom-*</code> captures all headers with that prefix,{" "}
-										<code className="text-xs">*</code> captures all headers — note that <code className="text-xs">*</code> will capture
-										sensitive headers like Authorization).
-									</FormDescription>
+									<FormDescription>{t("observability.maxim.requestHeadersDescription")}</FormDescription>
 									<FormControl>
 										<RequestHeadersTextarea
 											className="h-24"
-											placeholder="X-Tenant-ID, X-Request-Source, x-custom-*"
+											placeholder={t("observability.maxim.requestHeadersPlaceholder")}
 											disabled={!hasMaximAccess}
 											value={field.value ?? []}
 											onChange={field.onChange}
@@ -149,7 +162,7 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 						name="enabled"
 						render={({ field }) => (
 							<FormItem className="flex items-center gap-2 py-2">
-								<FormLabel className="text-muted-foreground text-sm font-medium">Enabled</FormLabel>
+								<FormLabel className="text-muted-foreground text-sm font-medium">{t("observability.maxim.enabled")}</FormLabel>
 								<FormControl>
 									<Switch
 										checked={field.value}
@@ -168,8 +181,8 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 								variant="outline"
 								onClick={onDelete}
 								disabled={isDeleting}
-								title="Delete connector"
-								aria-label="Delete connector"
+								title={t("observability.common.deleteConnector")}
+								aria-label={t("observability.common.deleteConnector")}
 							>
 								<Trash2 className="size-4" />
 							</Button>
@@ -189,24 +202,18 @@ export function MaximFormFragment({ initialConfig, onSave, onDelete, isDeleting 
 							}}
 							disabled={!hasMaximAccess || isLoading || !form.formState.isDirty}
 						>
-							Reset
+							{t("common.actions.reset")}
 						</Button>
 						<TooltipProvider>
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<Button type="submit" disabled={!hasMaximAccess || !form.formState.isDirty} isLoading={isSaving}>
-										Save Maxim Configuration
+										{t("observability.maxim.save")}
 									</Button>
 								</TooltipTrigger>
 								{!form.formState.isDirty && (
 									<TooltipContent>
-										<p>
-											{!form.formState.isDirty
-												? "No changes made and validation errors present"
-												: !form.formState.isDirty
-													? "No changes made"
-													: "Please fix validation errors"}
-										</p>
+										<p>{tooltipMessage}</p>
 									</TooltipContent>
 								)}
 							</Tooltip>

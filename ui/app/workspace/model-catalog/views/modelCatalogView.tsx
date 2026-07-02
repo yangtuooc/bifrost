@@ -1,10 +1,12 @@
 import { NoPermissionView } from "@/components/noPermissionView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RbacOperation, RbacResource, useRbac } from "@enterprise/lib";
+import { useTranslation } from "react-i18next";
 import AttributesTab from "./attributesTab";
 import OverviewTab from "./overviewTab";
 
 export default function ModelCatalogView() {
+	const { t } = useTranslation();
 	const hasAccess = useRbac(RbacResource.ModelProvider, RbacOperation.View);
 
 	if (!hasAccess) {
@@ -16,10 +18,10 @@ export default function ModelCatalogView() {
 			<Tabs defaultValue="overview" className="flex min-h-0 grow flex-col gap-4">
 				<TabsList className="shrink-0">
 					<TabsTrigger value="overview" data-testid="model-catalog-tab-overview">
-						Overview
+						{t("modelCatalog.tabs.overview")}
 					</TabsTrigger>
 					<TabsTrigger value="attributes" data-testid="model-catalog-tab-attributes">
-						Models
+						{t("modelCatalog.tabs.models")}
 					</TabsTrigger>
 				</TabsList>
 				<TabsContent value="overview" className="min-h-0 overflow-auto">

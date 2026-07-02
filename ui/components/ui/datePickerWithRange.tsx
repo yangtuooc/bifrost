@@ -11,6 +11,7 @@ import { ComboboxSelect } from "./combobox";
 import { Label } from "./label";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { TimePicker, TimeValue } from "./timePicker";
+import { useTranslation } from "react-i18next";
 
 export type TimeRange = {
 	from: TimeValue;
@@ -68,6 +69,7 @@ interface DateTimePickerWithRangeProps extends DatePickerWithRangeProps {
 }
 
 export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
+	const { t } = useTranslation();
 	const { className, buttonClassName, triggerLabel, onTrigger, dateTime } = props;
 	const activeTimezone = props.showTimezone ? props.timezone : undefined;
 
@@ -201,7 +203,7 @@ export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
 										formatDate(dateTime.from, "LLL dd, y")
 									)
 								) : (
-									<span>Pick a date</span>
+									<span>{t("common.dateTimePicker.pickDate")}</span>
 								)}
 							</>
 						)}
@@ -242,9 +244,9 @@ export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
 							/>
 							<div className="-mt-1 flex flex-row items-center px-2 pb-1">
 								<div className="m-1 flex flex-1 flex-col gap-1">
-									<Label className="ml-0.5">From Time</Label>
+									<Label className="ml-0.5">{t("common.dateTimePicker.fromTime")}</Label>
 									<TimePicker
-										aria-label="From Time"
+										aria-label={t("common.dateTimePicker.fromTime")}
 										className=""
 										value={timeValue?.from}
 										onChange={(v) => {
@@ -263,9 +265,9 @@ export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
 									/>
 								</div>
 								<div className="m-1 flex flex-1 flex-col gap-1">
-									<Label className="ml-0.5">To Time</Label>
+									<Label className="ml-0.5">{t("common.dateTimePicker.toTime")}</Label>
 									<TimePicker
-										aria-label="To Time"
+										aria-label={t("common.dateTimePicker.toTime")}
 										className=""
 										value={timeValue?.to}
 										onChange={(v) => {
@@ -307,7 +309,7 @@ export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
 					{props.showTimezone && (
 						<div className="flex items-center gap-2 border-t px-3 py-2">
 							<Globe className="text-muted-foreground size-4 shrink-0" />
-							<Label className="text-muted-foreground shrink-0 text-xs">Timezone</Label>
+							<Label className="text-muted-foreground shrink-0 text-xs">{t("common.dateTimePicker.timezone")}</Label>
 							<div className="ml-auto w-[260px]">
 								<ComboboxSelect
 									options={timezoneOptions}
@@ -344,7 +346,7 @@ export function DateTimePickerWithRange(props: DateTimePickerWithRangeProps) {
 										}
 									}}
 									hideClear
-									placeholder="Select timezone"
+									placeholder={t("common.dateTimePicker.selectTimezone")}
 									data-testid="datepicker-timezone-select"
 								/>
 							</div>
@@ -384,6 +386,7 @@ interface DateTimePickerProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function DateTimePicker(props: DateTimePickerProps) {
+	const { t } = useTranslation();
 	const { className, buttonClassName, triggerLabel, onTrigger, dateTime } = props;
 
 	const initialDate = dateTime ? new Date(dateTime) : new Date();
@@ -452,7 +455,7 @@ export function DateTimePicker(props: DateTimePickerProps) {
 								{format(date, "LLL dd, y")} {printTimeValue(timeValue)}
 							</>
 						) : (
-							<span>Pick a date and time</span>
+							<span>{t("common.dateTimePicker.pickDateTime")}</span>
 						)}
 					</Button>
 				</PopoverTrigger>
@@ -476,9 +479,9 @@ export function DateTimePicker(props: DateTimePickerProps) {
 							}}
 						/>
 						<div className="mt-3 flex flex-col gap-1 px-2 pb-2">
-							<Label className="ml-0.5">Time</Label>
+							<Label className="ml-0.5">{t("common.dateTimePicker.time")}</Label>
 							<TimePicker
-								aria-label="Time"
+								aria-label={t("common.dateTimePicker.time")}
 								className=""
 								value={timeValue}
 								onChange={(v) => {

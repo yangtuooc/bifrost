@@ -1,13 +1,15 @@
 /**
- * Action Button Component for CEL Rule Builder
- * Used for Add/Remove actions in query builder
+ * CEL Rule Builder 的操作按钮。
+ * 用于 query builder 中的添加/移除操作。
  */
 
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { ActionProps } from "react-querybuilder";
 
 export function ActionButton({ handleOnClick, label, className, title }: ActionProps) {
+	const { t } = useTranslation();
 	const labelStr = typeof label === "string" ? label : "";
 	const labelLower = labelStr.toLowerCase();
 	const isAddButton = labelLower.includes("add");
@@ -19,9 +21,9 @@ export function ActionButton({ handleOnClick, label, className, title }: ActionP
 		title === "Remove rule" ||
 		title === "Remove group";
 
-	// Icon-only remove button needs an accessible name (no visible label is rendered)
+	// 仅图标的移除按钮需要可访问名称。
 	const iconOnly = isRemoveButton;
-	const ariaLabel = iconOnly ? labelStr?.trim() || (typeof title === "string" ? title.trim() : "") || "Remove" : undefined;
+	const ariaLabel = iconOnly ? t("common.actions.remove") : undefined;
 
 	return (
 		<Button

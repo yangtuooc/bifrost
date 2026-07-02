@@ -1,5 +1,6 @@
 import { ExternalLink, X } from "lucide-react";
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { AsyncMultiSelect } from "./asyncMultiselect";
 import { Badge } from "./badge";
 import { Button } from "./button";
@@ -40,12 +41,14 @@ export function MCPServerSelector({
 	value,
 	onChange,
 	mcpClients,
-	placeholder = "Search and select MCP servers...",
+	placeholder,
 	disabled = false,
 	className,
 	registryPath = "/workspace/mcp-registry",
 }: MCPServerSelectorProps) {
-	// Create options from MCP clients using meta for complex data
+	const { t } = useTranslation();
+
+	// 使用 meta 保存展示所需的 server 详情，避免把复合结构塞进 value。
 	const allServerOptions = useMemo((): Option<ServerOptionMeta>[] => {
 		return mcpClients.map((client) => ({
 			label: client.config.name,
@@ -60,7 +63,7 @@ export function MCPServerSelector({
 		}));
 	}, [mcpClients]);
 
-	// Get full server info for selected servers
+	// 根据已选 server ID 补齐展示信息。
 	const selectedServersWithInfo = useMemo(() => {
 		return value.map((serverId) => {
 			const client = mcpClients.find((c) => c.config.client_id === serverId);
@@ -74,7 +77,7 @@ export function MCPServerSelector({
 		});
 	}, [value, mcpClients]);
 
-	// Filter out already selected servers from options
+	// 从候选项中过滤掉已经选择的 server。
 	const availableOptions = useMemo(() => {
 		const selectedSet = new Set(value);
 		return allServerOptions.filter((opt) => !selectedSet.has(opt.value));
@@ -87,7 +90,7 @@ export function MCPServerSelector({
 			const newServer = selected[selected.length - 1];
 			if (!newServer?.meta) return;
 
-			// Check if already selected
+			// 避免重复添加同一个 server。
 			if (!value.includes(newServer.meta.clientId)) {
 				onChange([...value, newServer.meta.clientId]);
 			}
@@ -137,9 +140,9 @@ export function MCPServerSelector({
 
 	return (
 		<div className={cn("space-y-3", className)}>
-			{/* Search dropdown */}
+			{/* 搜索下拉框 */}
 			<AsyncMultiSelect<ServerOptionMeta>
-				placeholder={placeholder}
+				placeholder={placeholder ?? t("mcpRegistry.selectors.searchServersPlaceholder")}
 				disabled={disabled}
 				defaultOptions={availableOptions}
 				reload={reload}
@@ -150,10 +153,10 @@ export function MCPServerSelector({
 				closeMenuOnSelect={true}
 				hideSelectedOptions={true}
 				controlShouldRenderValue={false}
-				noOptionsMessage={() => "No MCP servers found"}
+				noOptionsMessage={() => t("mcpRegistry.selectors.noServersFound")}
 				views={{
 					option: (props) => {
-						// Access data as Option<ServerOptionMeta> since that's the actual runtime type
+						// 运行时 data 实际是携带 meta 的 Option<ServerOptionMeta>。
 						const data = props.data as unknown as Option<ServerOptionMeta>;
 						return (
 							<div
@@ -173,14 +176,16 @@ export function MCPServerSelector({
 										</Badge>
 									)}
 								</div>
-								<span className="text-content-tertiary text-xs">{data.meta?.toolCount} tools</span>
+								<span className="text-content-tertiary text-xs">
+									{t("mcpRegistry.selectors.toolsCount", { count: data.meta?.toolCount ?? 0 })}
+								</span>
 							</div>
 						);
 					},
 				}}
 			/>
 
-			{/* Selected servers list */}
+			{/* 已选 server 列表 */}
 			{selectedServersWithInfo.length > 0 && (
 				<div className="space-y-2">
 					{selectedServersWithInfo.map((server) => (
@@ -197,7 +202,7 @@ export function MCPServerSelector({
 										{server.state}
 									</Badge>
 								)}
-								<span className="text-muted-foreground text-xs">{server.toolCount} tools</span>
+								<span className="text-muted-foreground text-xs">{t("mcpRegistry.selectors.toolsCount", { count: server.toolCount })}</span>
 							</div>
 							<div className="flex items-center gap-1">
 								<Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
@@ -205,7 +210,7 @@ export function MCPServerSelector({
 										href={`${registryPath}?server=${server.clientId}`}
 										target="_blank"
 										rel="noopener noreferrer"
-										title="Open server details in new tab"
+										title={t("mcpRegistry.selectors.openServerDetails")}
 									>
 										<ExternalLink className="h-4 w-4" />
 									</a>
@@ -226,10 +231,10 @@ export function MCPServerSelector({
 				</div>
 			)}
 
-			{/* Empty state */}
+			{/* 空状态 */}
 			{selectedServersWithInfo.length === 0 && (
 				<div className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
-					No servers selected. Use the search above to add MCP servers.
+					{t("mcpRegistry.selectors.noServersSelected")}
 				</div>
 			)}
 		</div>

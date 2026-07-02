@@ -7,6 +7,7 @@ import { getExampleBaseUrl } from "@/lib/utils/port";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { AlertTriangle, Copy } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type Language = "python" | "typescript";
 
@@ -39,6 +40,7 @@ interface CodeBlockProps {
 }
 
 function CodeBlock({ code, language, onLanguageChange, showLanguageSelect = false, readonly = true }: CodeBlockProps) {
+	const { t } = useTranslation();
 	const { copy: copyToClipboard } = useCopyToClipboard();
 
 	return (
@@ -59,7 +61,7 @@ function CodeBlock({ code, language, onLanguageChange, showLanguageSelect = fals
 						</SelectContent>
 					</Select>
 				)}
-				<Button variant="ghost" size="icon" onClick={() => copyToClipboard(code)} aria-label="Copy to clipboard">
+				<Button variant="ghost" size="icon" onClick={() => copyToClipboard(code)} aria-label={t("common.actions.copy")}>
 					<Copy className="size-4" />
 				</Button>
 			</div>
@@ -74,6 +76,7 @@ interface MCPEmptyStateProps {
 }
 
 export function MCPEmptyState({ error, statusIndicator }: MCPEmptyStateProps) {
+	const { t } = useTranslation();
 	const [language, setLanguage] = useState<Language>("python");
 
 	// Generate examples dynamically using the port utility
@@ -248,30 +251,28 @@ if (response.choices[0].message.tool_calls) {
 			{error && (
 				<Alert>
 					<AlertTriangle className="h-4 w-4" />
-					<AlertDescription>
-						{isUnexpectedError ? "Looks like you haven't configured the log store in your config file." : error}
-					</AlertDescription>
+					<AlertDescription>{isUnexpectedError ? t("mcpLogs.empty.logStoreNotConfigured") : error}</AlertDescription>
 				</Alert>
 			)}
 
 			<div className="w-full space-y-6">
 				<div className="flex flex-row items-center gap-2">
 					<div>
-						<h3 className="text-lg font-semibold">Get Started with MCP Tool Execution</h3>
-						<p className="text-muted-foreground text-sm">Execute your first MCP tool call to see logs appear</p>
+						<h3 className="text-lg font-semibold">{t("mcpLogs.empty.title")}</h3>
+						<p className="text-muted-foreground text-sm">{t("mcpLogs.empty.description")}</p>
 					</div>
 					<div className="ml-auto">{statusIndicator}</div>
 				</div>
 
 				<Tabs defaultValue="manual" className="w-full rounded-lg border">
 					<TabsList className="grid h-10 w-full grid-cols-2 rounded-t-lg rounded-b-none">
-						<TabsTrigger value="manual">Manual Tool Execution</TabsTrigger>
-						<TabsTrigger value="agent">Agent Mode (Auto-Execute)</TabsTrigger>
+						<TabsTrigger value="manual">{t("mcpLogs.empty.manualTab")}</TabsTrigger>
+						<TabsTrigger value="agent">{t("mcpLogs.empty.agentTab")}</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="manual" className="px-4">
 						<div className="text-muted-foreground mb-3 text-sm">
-							<p>Full control over tool approval. You explicitly execute each tool call via the API.</p>
+							<p>{t("mcpLogs.empty.manualDescription")}</p>
 						</div>
 						<CodeBlock
 							code={examples.manual[language]}
@@ -283,7 +284,7 @@ if (response.choices[0].message.tool_calls) {
 
 					<TabsContent value="agent" className="px-4">
 						<div className="text-muted-foreground mb-3 text-sm">
-							<p>Autonomous execution for pre-approved tools. Configure auto-executable tools in MCP Gateway settings.</p>
+							<p>{t("mcpLogs.empty.agentDescription")}</p>
 						</div>
 						<CodeBlock
 							code={examples.agentMode[language]}
@@ -295,22 +296,24 @@ if (response.choices[0].message.tool_calls) {
 				</Tabs>
 
 				<div className="bg-muted/50 rounded-lg border p-4">
-					<h4 className="mb-2 text-sm font-semibold">Prerequisites</h4>
+					<h4 className="mb-2 text-sm font-semibold">{t("mcpLogs.empty.prerequisites")}</h4>
 					<ul className="text-muted-foreground space-y-1 text-sm">
 						<li className="flex items-start gap-2">
 							<span className="text-primary">1.</span>
-							<span>Configure MCP servers in the MCP Gateway (e.g., filesystem, web_search)</span>
+							<span>{t("mcpLogs.empty.prerequisiteConfigureServers")}</span>
 						</li>
 						<li className="flex items-start gap-2">
 							<span className="text-primary">2.</span>
 							<span>
-								Set <code className="bg-muted rounded px-1">tools_to_execute</code> to whitelist available tools
+								{t("mcpLogs.empty.prerequisiteWhitelistStart")} <code className="bg-muted rounded px-1">tools_to_execute</code>{" "}
+								{t("mcpLogs.empty.prerequisiteWhitelistEnd")}
 							</span>
 						</li>
 						<li className="flex items-start gap-2">
 							<span className="text-primary">3.</span>
 							<span>
-								For Agent Mode: Configure <code className="bg-muted rounded px-1">tools_to_auto_execute</code> for autonomous execution
+								{t("mcpLogs.empty.prerequisiteAgentStart")} <code className="bg-muted rounded px-1">tools_to_auto_execute</code>{" "}
+								{t("mcpLogs.empty.prerequisiteAgentEnd")}
 							</span>
 						</li>
 					</ul>

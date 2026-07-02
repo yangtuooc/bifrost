@@ -8,9 +8,10 @@ import type { MCPLibraryEntry } from "@/lib/types/mcp";
 import { Link } from "@tanstack/react-router";
 import { BookIcon, Check, Download, LogIn, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MCPLibraryDeleteDialog } from "./mcpLibraryDeleteDialog";
-import { authLabel, MCP_ICON_FALLBACK, transportIcon, transportLabel } from "./mcpLibraryServerCard";
+import { localizedAuthLabel, MCP_ICON_FALLBACK, transportIcon, transportLabel } from "./mcpLibraryServerCard";
 
 interface MCPLibraryServersTableProps {
 	servers: MCPLibraryEntry[];
@@ -27,6 +28,7 @@ export function MCPLibraryServersTable({
 	canDelete,
 	onInstall,
 }: MCPLibraryServersTableProps) {
+	const { t } = useTranslation();
 	const [deleteEntry, { isLoading: isDeleting }] = useDeleteMCPLibraryEntryMutation();
 	const [serverToDelete, setServerToDelete] = useState<MCPLibraryEntry | null>(null);
 
@@ -34,7 +36,7 @@ export function MCPLibraryServersTable({
 		if (!serverToDelete) return;
 		try {
 			await deleteEntry(serverToDelete.id).unwrap();
-			toast.success(`"${serverToDelete.name}" removed from the library.`);
+			toast.success(t("mcpRegistry.library.toasts.removed", { name: serverToDelete.name }));
 			setServerToDelete(null);
 		} catch (error) {
 			toast.error(getErrorMessage(error));
@@ -46,10 +48,10 @@ export function MCPLibraryServersTable({
 			<Table containerClassName="overflow-x-clip">
 				<TableHeader className="bg-muted sticky top-0 z-10">
 					<TableRow>
-						<TableHead className="w-16">Icon</TableHead>
-						<TableHead>Server</TableHead>
-						<TableHead className="hidden w-10 lg:table-cell">Details</TableHead>
-						<TableHead className="w-32 text-right">Actions</TableHead>
+						<TableHead className="w-16">{t("mcpRegistry.library.table.icon")}</TableHead>
+						<TableHead>{t("mcpRegistry.library.table.server")}</TableHead>
+						<TableHead className="hidden w-10 lg:table-cell">{t("mcpRegistry.library.table.details")}</TableHead>
+						<TableHead className="w-32 text-right">{t("common.table.actions")}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -81,13 +83,13 @@ export function MCPLibraryServersTable({
 											{isInstalled && (
 												<Badge variant="success" className="gap-1">
 													<Check className="size-3" />
-													Installed
+													{t("mcpRegistry.library.badges.installed")}
 												</Badge>
 											)}
-											{server.source === "custom" && <Badge variant="outline">Custom</Badge>}
+											{server.source === "custom" && <Badge variant="outline">{t("mcpRegistry.library.badges.custom")}</Badge>}
 										</div>
 										<p className="text-muted-foreground line-clamp-1 max-w-4xl text-sm leading-5">
-											{server.description || "No description available."}
+											{server.description || t("mcpRegistry.library.empty.noDescription")}
 										</p>
 									</div>
 								</TableCell>
@@ -98,7 +100,7 @@ export function MCPLibraryServersTable({
 											{transportLabel(server.connection_type)}
 										</span>
 										<span className="bg-border h-3 w-px shrink-0" />
-										<span className="truncate">{authLabel(server.auth_type)}</span>
+										<span className="truncate">{localizedAuthLabel(server.auth_type, t)}</span>
 									</div>
 								</TableCell>
 								<TableCell className="text-right">
@@ -111,13 +113,13 @@ export function MCPLibraryServersTable({
 															variant="outline"
 															size="icon"
 															onClick={() => setServerToDelete(server)}
-															aria-label={`Remove ${server.name} from library`}
+															aria-label={t("mcpRegistry.library.aria.remove", { name: server.name })}
 															data-testid={`mcp-library-table-delete-${server.slug}`}
 														>
 															<Trash2 className="h-4 w-4" />
 														</Button>
 													</TooltipTrigger>
-													<TooltipContent>Remove from library</TooltipContent>
+													<TooltipContent>{t("mcpRegistry.library.tooltips.remove")}</TooltipContent>
 												</Tooltip>
 											</div>
 										)}
@@ -128,7 +130,7 @@ export function MCPLibraryServersTable({
 														asChild
 														variant="outline"
 														size="icon"
-														aria-label={`Open ${server.name} documentation`}
+														aria-label={t("mcpRegistry.library.aria.openDocs", { name: server.name })}
 														data-testid={`mcp-library-table-docs-${server.slug}`}
 													>
 														<a href={server.docs_url} target="_blank" rel="noreferrer">
@@ -136,19 +138,19 @@ export function MCPLibraryServersTable({
 														</a>
 													</Button>
 												</TooltipTrigger>
-												<TooltipContent>Documentation</TooltipContent>
+												<TooltipContent>{t("mcpRegistry.library.tooltips.documentation")}</TooltipContent>
 											</Tooltip>
 										)}
 										{isInstalled ? (
 											<Tooltip>
 												<TooltipTrigger asChild>
 													<Button asChild size="icon" data-testid={`mcp-library-table-open-${server.slug}`}>
-														<Link to="/workspace/mcp-registry" aria-label={`Open ${server.name}`}>
+														<Link to="/workspace/mcp-registry" aria-label={t("mcpRegistry.library.aria.open", { name: server.name })}>
 															<LogIn className="h-4 w-4" />
 														</Link>
 													</Button>
 												</TooltipTrigger>
-												<TooltipContent>Open installed server</TooltipContent>
+												<TooltipContent>{t("mcpRegistry.library.tooltips.openInstalled")}</TooltipContent>
 											</Tooltip>
 										) : (
 											<Tooltip>
@@ -157,13 +159,13 @@ export function MCPLibraryServersTable({
 														size="icon"
 														onClick={() => onInstall(server)}
 														disabled={!canCreateMCPClient}
-														aria-label={`Install ${server.name}`}
+														aria-label={t("mcpRegistry.library.aria.install", { name: server.name })}
 														data-testid={`mcp-library-table-install-${server.slug}`}
 													>
 														<Download className="h-4 w-4" />
 													</Button>
 												</TooltipTrigger>
-												<TooltipContent>Install</TooltipContent>
+												<TooltipContent>{t("mcpRegistry.library.actions.install")}</TooltipContent>
 											</Tooltip>
 										)}
 									</div>
@@ -186,17 +188,18 @@ export function MCPLibraryServersTable({
 	);
 }
 
-/** Skeleton placeholder mirroring the table layout while the library catalog loads. */
+/** Library catalog 加载时展示的表格骨架屏。 */
 export function MCPLibraryServersTableSkeleton({ rows = 8 }: { rows?: number }) {
+	const { t } = useTranslation();
 	return (
 		<div className="mb-2 overflow-y-auto rounded-md border" data-testid="mcp-library-table-skeleton">
 			<Table containerClassName="overflow-x-clip">
 				<TableHeader className="bg-muted sticky top-0 z-10">
 					<TableRow>
-						<TableHead className="w-16">Icon</TableHead>
-						<TableHead>Server</TableHead>
-						<TableHead className="hidden w-10 lg:table-cell">Details</TableHead>
-						<TableHead className="w-32 text-right">Actions</TableHead>
+						<TableHead className="w-16">{t("mcpRegistry.library.table.icon")}</TableHead>
+						<TableHead>{t("mcpRegistry.library.table.server")}</TableHead>
+						<TableHead className="hidden w-10 lg:table-cell">{t("mcpRegistry.library.table.details")}</TableHead>
+						<TableHead className="w-32 text-right">{t("common.table.actions")}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
