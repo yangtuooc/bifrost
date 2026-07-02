@@ -2934,12 +2934,17 @@ func TestDomesticProviders(t *testing.T) {
 		supportsImageEdit      bool
 		supportsImageStreaming bool
 		imagePath              string
+		supportsSpeech         bool
+		speechPath             string
 		supportsVideo          bool
+		videoCreatePath        string
+		videoRetrievePath      string
+		videoDownloadPath      string
 		supportsFiles          bool
 		supportsBatch          bool
 	}{
-		{name: "Aliyun", providerKey: schemas.Aliyun, supportsText: true, supportsImages: true, supportsImageEdit: true, imagePath: "/api/v1/services/aigc/multimodal-generation/generation", supportsFiles: true, supportsBatch: true},
-		{name: "Volcengine", providerKey: schemas.Volcengine, supportsImages: true, supportsImageStreaming: true, imagePath: "/images/generations", supportsVideo: true, supportsFiles: true},
+		{name: "Aliyun", providerKey: schemas.Aliyun, supportsText: true, supportsImages: true, supportsImageEdit: true, imagePath: "/api/v1/services/aigc/multimodal-generation/generation", supportsSpeech: true, speechPath: "/api/v1/services/aigc/multimodal-generation/generation", supportsVideo: true, videoCreatePath: "/api/v1/services/aigc/video-generation/video-synthesis", videoRetrievePath: "/api/v1/tasks/video-test", videoDownloadPath: "/download/aliyun-video-test.mp4", supportsFiles: true, supportsBatch: true},
+		{name: "Volcengine", providerKey: schemas.Volcengine, supportsImages: true, supportsImageStreaming: true, imagePath: "/images/generations", supportsVideo: true, videoCreatePath: "/contents/generations/tasks", videoRetrievePath: "/contents/generations/tasks/video-test", videoDownloadPath: "/download/video-test.mp4", supportsFiles: true},
 	}
 
 	for _, tt := range tests {
@@ -3056,7 +3061,39 @@ func TestDomesticProviders(t *testing.T) {
 				case "/api/v1/services/aigc/multimodal-generation/generation":
 					var payload map[string]interface{}
 					if err := json.Unmarshal(body, &payload); err != nil {
-						t.Errorf("aliyun image request is not valid JSON: %v", err)
+						t.Errorf("aliyun multimodal request is not valid JSON: %v", err)
+					}
+					if payload["model"] == "test-speech-model" {
+						input, _ := payload["input"].(map[string]interface{})
+						if input["text"] != "say hello" {
+							t.Errorf("aliyun speech text = %v, want say hello", input["text"])
+						}
+						if input["voice"] != "Cherry" {
+							t.Errorf("aliyun speech voice = %v, want Cherry", input["voice"])
+						}
+						if r.Header.Get("X-DashScope-SSE") == "enable" {
+							w.Header().Set("Content-Type", "text/event-stream")
+							_, _ = w.Write([]byte("data: {\"status_code\":200,\"request_id\":\"speech-stream-1\",\"output\":{\"finish_reason\":null,\"audio\":{\"data\":\"aGVs\"}},\"usage\":{}}\n\n"))
+							_, _ = w.Write([]byte("data: {\"status_code\":200,\"request_id\":\"speech-stream-1\",\"output\":{\"finish_reason\":\"stop\",\"audio\":{\"data\":\"\"}},\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"total_tokens\":3}}\n\n"))
+							return
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write([]byte(`{
+								"status_code": 200,
+								"request_id": "aliyun-speech-request",
+								"code": "",
+								"message": "",
+								"output": {
+									"finish_reason": "stop",
+									"audio": {
+										"url": "http://` + r.Host + `/download/audio-test.wav",
+										"id": "audio-test",
+										"expires_at": 456
+									}
+								},
+								"usage": {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3}
+							}`))
+						return
 					}
 					parameters, _ := payload["parameters"].(map[string]interface{})
 					if payload["model"] == "test-image-edit-model" {
@@ -3100,8 +3137,55 @@ func TestDomesticProviders(t *testing.T) {
 									}
 								}]
 							},
-							"usage": {"width": 1024, "height": 1024, "image_count": 1}
+								"usage": {"width": 1024, "height": 1024, "image_count": 1}
+							}`))
+				case "/download/audio-test.wav":
+					w.Header().Set("Content-Type", "audio/wav")
+					_, _ = w.Write([]byte("audio bytes"))
+				case "/api/v1/services/aigc/video-generation/video-synthesis":
+					var payload map[string]interface{}
+					if err := json.Unmarshal(body, &payload); err != nil {
+						t.Errorf("aliyun video request is not valid JSON: %v", err)
+					}
+					if r.Header.Get("X-DashScope-Async") != "enable" {
+						t.Errorf("aliyun video X-DashScope-Async = %q, want enable", r.Header.Get("X-DashScope-Async"))
+					}
+					if payload["model"] != "test-video-model" {
+						t.Errorf("aliyun video model = %v, want test-video-model", payload["model"])
+					}
+					parameters, _ := payload["parameters"].(map[string]interface{})
+					if parameters["duration"] != float64(5) {
+						t.Errorf("aliyun video duration = %v, want 5", parameters["duration"])
+					}
+					if parameters["resolution"] != "720P" {
+						t.Errorf("aliyun video resolution = %v, want 720P", parameters["resolution"])
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"request_id": "aliyun-video-request",
+							"output": {
+								"task_id": "video-test",
+								"task_status": "PENDING",
+								"submit_time": "123"
+							}
 						}`))
+				case "/api/v1/tasks/video-test":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"request_id": "aliyun-video-request",
+							"output": {
+								"task_id": "video-test",
+								"task_status": "SUCCEEDED",
+								"submit_time": "123",
+								"end_time": "456",
+								"video_url": "http://` + r.Host + `/download/aliyun-video-test.mp4",
+								"output_video_duration": 5,
+								"video_count": 1
+							}
+						}`))
+				case "/download/aliyun-video-test.mp4":
+					w.Header().Set("Content-Type", "video/mp4")
+					_, _ = w.Write([]byte("video bytes"))
 				case "/models":
 					w.Header().Set("Content-Type", "application/json")
 					_, _ = w.Write([]byte(`{
@@ -3417,6 +3501,64 @@ func TestDomesticProviders(t *testing.T) {
 				t.Fatalf("unexpected embedding response: %#v", embeddingResp)
 			}
 
+			if tt.supportsSpeech {
+				voice := "Cherry"
+				languageType := "Chinese"
+				speechResp, speechErr := provider.Speech(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostSpeechRequest{
+					Provider: tt.providerKey,
+					Model:    "test-speech-model",
+					Input:    &schemas.SpeechInput{Input: "say hello"},
+					Params: &schemas.SpeechParameters{
+						VoiceConfig:  &schemas.SpeechVoiceInput{Voice: &voice},
+						LanguageCode: &languageType,
+					},
+				})
+				if speechErr != nil {
+					t.Fatalf("Speech returned error: %v", speechErr.Error.Message)
+				}
+				if speechResp == nil || string(speechResp.Audio) != "audio bytes" || speechResp.Usage == nil || speechResp.Usage.TotalTokens != 3 {
+					t.Fatalf("unexpected speech response: %#v", speechResp)
+				}
+
+				speechStreamCtx := schemas.NewBifrostContext(context.Background(), schemas.NoDeadline)
+				speechStream, speechStreamErr := provider.SpeechStream(speechStreamCtx, func(_ *schemas.BifrostContext, result *schemas.BifrostResponse, err *schemas.BifrostError) (*schemas.BifrostResponse, *schemas.BifrostError) {
+					return result, err
+				}, nil, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostSpeechRequest{
+					Provider: tt.providerKey,
+					Model:    "test-speech-model",
+					Input:    &schemas.SpeechInput{Input: "say hello"},
+					Params: &schemas.SpeechParameters{
+						VoiceConfig:  &schemas.SpeechVoiceInput{Voice: &voice},
+						LanguageCode: &languageType,
+					},
+				})
+				if speechStreamErr != nil {
+					t.Fatalf("SpeechStream returned error: %v", speechStreamErr.Error.Message)
+				}
+				speechStreamChunks := 0
+				speechStreamTimeout := time.After(5 * time.Second)
+			speechStreamLoop:
+				for {
+					select {
+					case chunk, ok := <-speechStream:
+						if !ok {
+							break speechStreamLoop
+						}
+						if chunk != nil && chunk.BifrostError != nil {
+							t.Fatalf("unexpected speech stream error chunk: %s (%#v)", chunk.BifrostError.GetErrorString(), chunk.BifrostError)
+						}
+						if chunk != nil {
+							speechStreamChunks++
+						}
+					case <-speechStreamTimeout:
+						t.Fatal("timed out waiting for speech stream to close")
+					}
+				}
+				if speechStreamChunks == 0 {
+					t.Fatal("expected at least one speech stream chunk")
+				}
+			}
+
 			if tt.supportsImages {
 				size := "1024x1024"
 				imageResp, bifrostErr := provider.ImageGeneration(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostImageGenerationRequest{
@@ -3697,8 +3839,14 @@ func TestDomesticProviders(t *testing.T) {
 					expectedImagePathCount++
 				}
 			}
+			if tt.supportsSpeech && tt.speechPath == tt.imagePath {
+				expectedImagePathCount += 2
+			}
 			if tt.supportsImages && paths[tt.imagePath] != expectedImagePathCount {
 				t.Fatalf("images path count = %d, want %d for %s", paths[tt.imagePath], expectedImagePathCount, tt.imagePath)
+			}
+			if tt.supportsSpeech && tt.speechPath != tt.imagePath && paths[tt.speechPath] != 2 {
+				t.Fatalf("speech path count = %d, want 2 for %s", paths[tt.speechPath], tt.speechPath)
 			}
 			if tt.supportsFiles && paths["/files"] < 2 {
 				t.Fatalf("files path count = %d, want at least 2", paths["/files"])
@@ -3709,14 +3857,14 @@ func TestDomesticProviders(t *testing.T) {
 			if tt.supportsFiles && paths["/files/file-test/content"] != 1 {
 				t.Fatalf("file content path count = %d, want 1", paths["/files/file-test/content"])
 			}
-			if tt.supportsVideo && paths["/contents/generations/tasks"] != 1 {
-				t.Fatalf("video tasks path count = %d, want 1", paths["/contents/generations/tasks"])
+			if tt.supportsVideo && paths[tt.videoCreatePath] != 1 {
+				t.Fatalf("video tasks path count = %d, want 1 for %s", paths[tt.videoCreatePath], tt.videoCreatePath)
 			}
-			if tt.supportsVideo && paths["/contents/generations/tasks/video-test"] != 2 {
-				t.Fatalf("video task reference path count = %d, want 2", paths["/contents/generations/tasks/video-test"])
+			if tt.supportsVideo && paths[tt.videoRetrievePath] != 2 {
+				t.Fatalf("video task reference path count = %d, want 2 for %s", paths[tt.videoRetrievePath], tt.videoRetrievePath)
 			}
-			if tt.supportsVideo && paths["/download/video-test.mp4"] != 1 {
-				t.Fatalf("video download path count = %d, want 1", paths["/download/video-test.mp4"])
+			if tt.supportsVideo && paths[tt.videoDownloadPath] != 1 {
+				t.Fatalf("video download path count = %d, want 1 for %s", paths[tt.videoDownloadPath], tt.videoDownloadPath)
 			}
 			if tt.supportsBatch && paths["/batches"] != 2 {
 				t.Fatalf("batches path count = %d, want 2", paths["/batches"])

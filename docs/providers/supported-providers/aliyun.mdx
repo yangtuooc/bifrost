@@ -1,12 +1,12 @@
 ---
 title: "Alibaba Cloud"
-description: "Alibaba Cloud Model Studio / DashScope provider guide for text completions, chat, responses, embeddings, image generation, image editing, files, batch, streaming, and configuration"
+description: "Alibaba Cloud Model Studio / DashScope provider guide for text completions, chat, responses, embeddings, image generation, image editing, speech, video, files, batch, streaming, and configuration"
 icon: "cloud"
 ---
 
 ## Overview
 
-Alibaba Cloud is supported through Model Studio / DashScope APIs. Bifrost treats `aliyun` as a built-in provider with its own provider package. It reuses Bifrost's existing OpenAI wire-format handlers for operations whose request and response shapes are compatible, and uses a provider-specific converter for Qwen-Image because that API is not OpenAI wire-compatible.
+Alibaba Cloud is supported through Model Studio / DashScope APIs. Bifrost treats `aliyun` as a built-in provider with its own provider package. It reuses Bifrost's existing OpenAI wire-format handlers for operations whose request and response shapes are compatible, and uses provider-specific converters for Qwen-Image, Qwen-TTS, and Wan video because those APIs are not OpenAI wire-compatible.
 
 The built-in default base URL is:
 
@@ -31,15 +31,16 @@ https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
 | Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
 | Image Generation | ✅ | ❌ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses the Qwen-Image synchronous API. Bifrost converts `1024x1024` style sizes to Alibaba Cloud's `1024*1024` format. |
 | Image Edit | ✅ | ❌ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses Qwen-Image-Edit through Alibaba Cloud's native multimodal generation API. Bifrost sends input images as Base64 data URLs. |
+| Speech (TTS) | ✅ | ✅ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses Qwen-TTS through Alibaba Cloud's native multimodal generation API. Non-streaming responses download the returned audio URL; streaming responses decode Base64 audio chunks. |
+| Transcription (STT) | ❌ | ❌ | - | Not enabled because Alibaba Cloud's documented speech recognition flows do not map cleanly to Bifrost's synchronous transcription abstraction in this provider. |
 | Files | ✅ | - | `/files` | Uses Alibaba Cloud's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
 | Batch | ✅ | - | `/batches` | Uses Alibaba Cloud's OpenAI-compatible Batch File API. Inline `requests` are converted to JSONL and uploaded as a batch file. |
 | Image Variation | ❌ | ❌ | - | Not documented as a distinct Qwen image variation API compatible with Bifrost's variation abstraction. |
-| Speech / Transcription | ❌ | ❌ | - | Qwen-Audio is documented as not supporting the OpenAI-compatible protocol; audio support requires a provider-specific implementation. |
 | Count Tokens | ❌ | - | - | No Bifrost mapping is enabled for this provider. |
-| Video | ❌ | - | - | Native video APIs are not OpenAI wire-compatible with Bifrost's current video abstraction. |
+| Video Generation / Retrieve / Download | ✅ | - | `/api/v1/services/aigc/video-generation/video-synthesis`, `/api/v1/tasks/{task_id}` | Uses Alibaba Cloud's native asynchronous video task API and maps task lifecycle into Bifrost's Video API abstraction. List, delete, and remix are not enabled. |
 
 <Note>
-Bifrost appends OpenAI-compatible paths to the configured `network_config.base_url`. If you override the base URL, use the OpenAI-compatible base URL that includes `/compatible-mode/v1`. For Qwen-Image, Bifrost derives the native `/api/v1/services/aigc/multimodal-generation/generation` endpoint from the same host.
+Bifrost appends OpenAI-compatible paths to the configured `network_config.base_url`. If you override the base URL, use the OpenAI-compatible base URL that includes `/compatible-mode/v1`. For Qwen-Image, Qwen-TTS, and video, Bifrost derives native `/api/v1/...` endpoints from the same host, so workspace-specific regional base URLs such as `https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1` are recommended for production.
 </Note>
 
 ## Setup & Configuration
@@ -176,6 +177,64 @@ curl -X POST http://localhost:8080/v1/images/edits \
 
 Bifrost converts uploaded image bytes into Base64 data URLs for Alibaba Cloud's native multimodal generation API and maps returned image URLs into the standard `data[].url` field.
 
+## Speech
+
+Use Qwen-TTS models through Bifrost's unified speech endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  --output speech.mp3 \
+  -d '{
+    "model": "aliyun/qwen3-tts-flash",
+    "input": "Hello from Alibaba Cloud speech synthesis.",
+    "voice": "Cherry",
+    "language_code": "Chinese"
+  }'
+```
+
+For streaming speech, request SSE output with `stream_format: "sse"`:
+
+```bash
+curl -N -X POST http://localhost:8080/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen3-tts-flash",
+    "input": "Stream this sentence as audio chunks.",
+    "voice": "Cherry",
+    "language_code": "Chinese",
+    "stream_format": "sse"
+  }'
+```
+
+Bifrost maps `voice` to Alibaba Cloud's native `input.voice` field and maps `language_code` to `input.language_type`. Additional provider parameters can be sent as top-level extra fields and are forwarded under Alibaba Cloud's `parameters` object.
+
+## Video Generation
+
+Use Wan video models through Bifrost's unified Video API. Bifrost creates an Alibaba Cloud asynchronous task and returns the task ID as the Bifrost video ID.
+
+```bash
+curl -X POST http://localhost:8080/v1/videos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/wan2.7-t2v-2026-06-12",
+    "prompt": "A compact product video on a clean white background",
+    "seconds": "5",
+    "size": "720p",
+    "ratio": "16:9",
+    "prompt_extend": true
+  }'
+```
+
+Retrieve and download generated videos through Bifrost's standard Video endpoints:
+
+```bash
+curl "http://localhost:8080/v1/videos/{task_id}:aliyun"
+curl "http://localhost:8080/v1/videos/{task_id}:aliyun/content" --output output.mp4
+```
+
+Bifrost maps Alibaba Cloud task statuses to Bifrost video statuses and maps completed task `video_url` values into `videos[].url`. Failed tasks are returned as video responses with `status: "failed"` and an `error` payload. Video list, delete, and remix return `unsupported_operation`.
+
 ## Files
 
 Upload files through Bifrost's unified Files API. For Alibaba Cloud document extraction, use provider-supported purposes such as `file-extract`; for Batch, use `batch`.
@@ -221,7 +280,7 @@ curl -N -X POST http://localhost:8080/v1/chat/completions \
 
 ## Capability Boundary
 
-Unsupported operations return Bifrost's standard `unsupported_operation` error. This is intentional for capabilities that either are not documented as OpenAI-compatible by Alibaba Cloud, or require provider-specific APIs outside the OpenAI-compatible base URL configured for this provider.
+Unsupported operations return Bifrost's standard `unsupported_operation` error. This is intentional for capabilities that are not documented by Alibaba Cloud, or do not map cleanly to Bifrost's current provider abstraction. For Alibaba Cloud, Qwen-Image, Qwen-TTS, and video are implemented with provider-specific native API converters; STT, image variation, count tokens, video list, video delete, and video remix remain unsupported in this provider.
 
 Official references:
 
@@ -233,3 +292,5 @@ Official references:
 - [Alibaba Cloud Model Studio OpenAI-compatible batch](https://help.aliyun.com/zh/model-studio/batch-interfaces-compatible-with-openai/)
 - [Alibaba Cloud Model Studio Qwen-Image API](https://help.aliyun.com/zh/model-studio/qwen-image-api)
 - [Alibaba Cloud Model Studio Qwen-Image-Edit API](https://help.aliyun.com/zh/model-studio/qwen-image-edit-api)
+- [Alibaba Cloud Model Studio Qwen-TTS API](https://help.aliyun.com/zh/model-studio/qwen-tts-api)
+- [Alibaba Cloud Model Studio text-to-video API](https://help.aliyun.com/zh/model-studio/text-to-video-api-reference)

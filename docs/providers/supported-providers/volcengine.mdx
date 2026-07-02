@@ -165,13 +165,16 @@ curl -X POST http://localhost:8080/v1/videos \
     "prompt": "A compact product video on a clean white background",
     "seconds": "5",
     "size": "720p",
-    "extra_body": {
-      "ratio": "16:9"
-    }
+    "ratio": "16:9"
   }'
 ```
 
 Retrieve and download generated videos through Bifrost's standard Video endpoints. The provider uses Ark task IDs as Bifrost video IDs and maps completed task `video_url` values into `videos[].url`. Video list and delete return `unsupported_operation`.
+
+```bash
+curl "http://localhost:8080/v1/videos/{task_id}:volcengine"
+curl "http://localhost:8080/v1/videos/{task_id}:volcengine/content" --output output.mp4
+```
 
 ## Streaming
 
