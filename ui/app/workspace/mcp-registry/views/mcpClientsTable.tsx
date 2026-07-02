@@ -128,6 +128,8 @@ interface MCPClientsTableProps {
 	search: string;
 	debouncedSearch: string;
 	server: string;
+	/** Whether any sidebar facet filter (connection/auth/code-mode/status) is active. */
+	filtersActive?: boolean;
 	onSearchChange: (value: string) => void;
 	onServerFilterClear: () => void;
 	offset: number;
@@ -142,6 +144,7 @@ export default function MCPClientsTable({
 	search,
 	debouncedSearch,
 	server,
+	filtersActive = false,
 	onSearchChange,
 	onServerFilterClear,
 	offset,
@@ -299,7 +302,7 @@ export default function MCPClientsTable({
 		}
 	};
 
-	const hasActiveFilters = debouncedSearch || server;
+	const hasActiveFilters = Boolean(debouncedSearch) || Boolean(server) || filtersActive;
 
 	// True empty state: no servers at all (not just filtered to zero)
 	if (totalCount === 0 && !hasActiveFilters) {
@@ -400,19 +403,19 @@ export default function MCPClientsTable({
 
 			<div className="flex grow flex-col overflow-auto">
 				<div className="mb-2 grow overflow-auto rounded-sm border">
-					<Table data-testid="mcp-clients-table">
+					<Table data-testid="mcp-clients-table" className="w-full min-w-[1516px] table-fixed">
 						<TableHeader className="sticky top-0">
 							<TableRow className="bg-muted/50">
-								<TableHead className="font-semibold">{t("common.table.name")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.connectionType")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.authType")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.authScope")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.codeMode")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.vkAccess")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.enabledTools")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.autoExecuteTools")}</TableHead>
-								<TableHead className="font-semibold">{t("mcpRegistry.table.state")}</TableHead>
-								<TableHead className="font-semibold">{t("common.table.status")}</TableHead>
+									<TableHead className="w-[260px] font-semibold">{t("common.table.name")}</TableHead>
+									<TableHead className="w-[150px] font-semibold">{t("mcpRegistry.table.connectionType")}</TableHead>
+									<TableHead className="w-[150px] font-semibold">{t("mcpRegistry.table.authType")}</TableHead>
+									<TableHead className="w-[140px] font-semibold">{t("mcpRegistry.table.authScope")}</TableHead>
+									<TableHead className="w-[120px] font-semibold">{t("mcpRegistry.table.codeMode")}</TableHead>
+									<TableHead className="w-[120px] font-semibold">{t("mcpRegistry.table.vkAccess")}</TableHead>
+									<TableHead className="w-[130px] font-semibold">{t("mcpRegistry.table.enabledTools")}</TableHead>
+									<TableHead className="w-[160px] font-semibold">{t("mcpRegistry.table.autoExecuteTools")}</TableHead>
+									<TableHead className="w-[140px] font-semibold">{t("mcpRegistry.table.state")}</TableHead>
+									<TableHead className="w-[90px] font-semibold">{t("common.table.status")}</TableHead>
 								<TableHead className={`bg-muted/50 sticky right-0 z-10 w-14 text-right ${PIN_SHADOW_RIGHT}`}></TableHead>
 							</TableRow>
 						</TableHeader>
@@ -443,7 +446,11 @@ export default function MCPClientsTable({
 											: 0;
 									return (
 										<TableRow key={c.config.client_id} className="group hover:bg-muted/50 transition-colors">
-											<TableCell className="font-medium">{c.config.name}</TableCell>
+											<TableCell className="font-medium">
+												<div className="truncate" title={c.config.name}>
+													{c.config.name}
+												</div>
+											</TableCell>
 											<TableCell data-testid="mcp-client-connection-type">
 												<Badge variant="outline" className="font-mono">
 													{getConnectionTypeDisplay(c.config.connection_type)}
