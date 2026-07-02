@@ -81,6 +81,7 @@ var rateLimitPatterns = []string{
 // Excluding providers that require extra configuration (e.g. Ollama, SGL, vLLM).
 var dynamicallyConfigurableProviders = []schemas.ModelProvider{
 	schemas.Anthropic,
+	schemas.Aliyun,
 	schemas.Azure,
 	schemas.Bedrock,
 	schemas.BedrockMantle,
@@ -97,6 +98,7 @@ var dynamicallyConfigurableProviders = []schemas.ModelProvider{
 	schemas.Parasail,
 	schemas.Perplexity,
 	schemas.Vertex,
+	schemas.Volcengine,
 	schemas.XAI,
 }
 

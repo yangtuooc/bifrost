@@ -344,6 +344,9 @@
         "openai": {
           "$ref": "#/$defs/provider"
         },
+        "aliyun": {
+          "$ref": "#/$defs/provider"
+        },
         "anthropic": {
           "$ref": "#/$defs/provider"
         },
@@ -420,6 +423,9 @@
           "$ref": "#/$defs/provider"
         },
         "runware": {
+          "$ref": "#/$defs/provider"
+        },
+        "volcengine": {
           "$ref": "#/$defs/provider"
         }
       },
@@ -1856,6 +1862,7 @@
                       "description": "Provider to use for generating embeddings. Required for semantic search; omit it for direct hash mode with dimension: 1.",
                       "enum": [
                         "openai",
+                        "aliyun",
                         "anthropic",
                         "gemini",
                         "bedrock",
@@ -1873,6 +1880,7 @@
                         "perplexity",
                         "replicate",
                         "sgl",
+                        "volcengine",
                         "huggingface"
                       ]
                     },

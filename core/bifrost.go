@@ -21,6 +21,7 @@ import (
 	"github.com/maximhq/bifrost/core/mcp"
 	"github.com/maximhq/bifrost/core/mcp/codemode/starlark"
 	"github.com/maximhq/bifrost/core/mcp/credstore"
+	"github.com/maximhq/bifrost/core/providers/aliyun"
 	"github.com/maximhq/bifrost/core/providers/anthropic"
 	"github.com/maximhq/bifrost/core/providers/azure"
 	"github.com/maximhq/bifrost/core/providers/bedrock"
@@ -47,6 +48,7 @@ import (
 	providerUtils "github.com/maximhq/bifrost/core/providers/utils"
 	"github.com/maximhq/bifrost/core/providers/vertex"
 	"github.com/maximhq/bifrost/core/providers/vllm"
+	"github.com/maximhq/bifrost/core/providers/volcengine"
 	"github.com/maximhq/bifrost/core/providers/xai"
 	schemas "github.com/maximhq/bifrost/core/schemas"
 	"github.com/valyala/fasthttp"
@@ -4007,6 +4009,8 @@ func (bifrost *Bifrost) createBaseProvider(providerKey schemas.ModelProvider, co
 	switch targetProviderKey {
 	case schemas.OpenAI:
 		return openai.NewOpenAIProvider(config, bifrost.logger), nil
+	case schemas.Aliyun:
+		return aliyun.NewAliyunProvider(config, bifrost.logger)
 	case schemas.Anthropic:
 		return anthropic.NewAnthropicProvider(config, bifrost.logger), nil
 	case schemas.Bedrock:
@@ -4019,6 +4023,8 @@ func (bifrost *Bifrost) createBaseProvider(providerKey schemas.ModelProvider, co
 		return azure.NewAzureProvider(config, bifrost.logger)
 	case schemas.Vertex:
 		return vertex.NewVertexProvider(config, bifrost.logger)
+	case schemas.Volcengine:
+		return volcengine.NewVolcengineProvider(config, bifrost.logger)
 	case schemas.Mistral:
 		return mistral.NewMistralProvider(config, bifrost.logger), nil
 	case schemas.Ollama:

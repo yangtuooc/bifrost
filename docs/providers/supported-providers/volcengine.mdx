@@ -1,0 +1,195 @@
+---
+title: "Volcengine"
+description: "Volcengine Ark provider guide for OpenAI-compatible chat, responses, embeddings, image generation, streaming, and configuration"
+icon: "mountain"
+---
+
+## Overview
+
+Volcengine is supported through Ark's OpenAI-compatible API. Bifrost treats `volcengine` as a built-in provider with its own provider package and reuses Bifrost's existing OpenAI wire-format handlers for operations whose request and response shapes are compatible.
+
+The built-in default base URL is:
+
+```text
+https://ark.cn-beijing.volces.com/api/v3
+```
+
+### Supported Operations
+
+| Operation | Bifrost support | Streaming | Upstream endpoint | Notes |
+|-----------|-----------------|-----------|-------------------|-------|
+| List Models | ✅ | - | `/models` | OpenAI-compatible model list format. |
+| Chat Completions | ✅ | ✅ | `/chat/completions` | Uses Ark's OpenAI-compatible Chat API. |
+| Responses API | ✅ | ✅ | `/responses` | Uses Ark's OpenAI-compatible Responses API. |
+| Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
+| Image Generation | ✅ | ✅ | `/images/generations` | Uses Ark's OpenAI-compatible image generation API. |
+| Files | ✅ | - | `/files` | Uses Ark's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
+| Text Completions | ❌ | ❌ | - | Not enabled because Ark's documented OpenAI-compatible model calls focus on Chat/Responses. |
+| Image Edit / Variation | ❌ | ❌ | - | Not documented as OpenAI-compatible for Ark in this integration. |
+| Speech / Transcription | ❌ | ❌ | - | No Bifrost OpenAI-compatible audio mapping is enabled for Ark. |
+| Batch | ❌ | - | - | No Bifrost batch mapping is enabled for Ark. |
+| Count Tokens | ❌ | - | - | No Bifrost mapping is enabled for this provider. |
+| Video | ❌ | - | - | Ark video generation uses provider-specific async task APIs, not Bifrost's OpenAI video wire format. |
+
+<Note>
+Bifrost appends provider paths to the configured `network_config.base_url`. If you override the base URL, use the Ark OpenAI-compatible base URL that includes `/api/v3`.
+</Note>
+
+## Setup & Configuration
+
+Configure Volcengine as a provider.
+
+<Tabs>
+<Tab title="Web UI">
+
+1. Navigate to **Models** > **Model Providers**.
+2. Click **Add New Provider** and select **Volcengine**.
+3. Click **Add Key**.
+4. Paste your Ark API key directly or use an environment variable such as `env.ARK_API_KEY`.
+5. Set **Allowed Models** to `*` or to specific Ark model IDs / endpoint IDs.
+6. Save the provider configuration.
+
+</Tab>
+<Tab title="config.json">
+
+```json
+{
+  "providers": {
+    "volcengine": {
+      "keys": [
+        {
+          "name": "volcengine-key-1",
+          "value": "env.ARK_API_KEY",
+          "models": ["*"],
+          "weight": 1.0
+        }
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Go SDK">
+
+```go
+case schemas.Volcengine:
+    return []schemas.Key{{
+        Name:   "volcengine-key-1",
+        Value:  *schemas.NewEnvVar("env.ARK_API_KEY"),
+        Models: []string{"*"},
+        Weight: 1.0,
+    }}, nil
+```
+
+</Tab>
+</Tabs>
+
+## Chat Completions
+
+Use the unified Bifrost endpoint with a `volcengine/<model>` model string:
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seed-1-6",
+    "messages": [
+      {"role": "user", "content": "Reply with exactly: volcengine ok"}
+    ]
+  }'
+```
+
+## Responses API
+
+Use the same Bifrost Responses endpoint with a `volcengine/<model>` model string:
+
+```bash
+curl -X POST http://localhost:8080/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seed-1-6",
+    "input": "Reply with exactly: volcengine responses ok"
+  }'
+```
+
+## Embeddings
+
+Use Ark embedding models through Bifrost's unified embedding endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-embedding",
+    "input": "A short sentence to embed."
+  }'
+```
+
+## Image Generation
+
+Use Ark image generation models through Bifrost's unified image generation endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seedream",
+    "prompt": "A compact product sketch on a white background",
+    "size": "1024x1024"
+  }'
+```
+
+## Files
+
+Upload files through Bifrost's unified Files API for Ark workflows that accept uploaded file IDs:
+
+```bash
+curl -X POST http://localhost:8080/v1/files \
+  -H "Content-Type: multipart/form-data" \
+  -F 'provider=volcengine' \
+  -F 'purpose=user_data' \
+  -F 'file=@input.txt'
+```
+
+## Streaming
+
+Chat streaming uses the same OpenAI-compatible SSE format:
+
+```bash
+curl -N -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seed-1-6",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Write one short sentence."}
+    ]
+  }'
+```
+
+Image generation streaming is also enabled for Ark image models that support the OpenAI-compatible `stream` option:
+
+```bash
+curl -N -X POST http://localhost:8080/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seedream",
+    "prompt": "A compact product sketch on a white background",
+    "stream": true
+  }'
+```
+
+## Capability Boundary
+
+Unsupported operations return Bifrost's standard `unsupported_operation` error. This is intentional for capabilities that either are not documented as OpenAI-compatible by Ark, or require provider-specific task APIs that should be implemented separately from the OpenAI provider.
+
+Official references:
+
+- [Volcengine Ark API base URL and authentication](https://www.volcengine.com/docs/82379/1298459?lang=zh)
+- [Volcengine Ark OpenAI-compatible protocol](https://www.volcengine.com/docs/82379/1330626)
+- [Volcengine Ark Chat API](https://www.volcengine.com/docs/82379/1494384)
+- [Volcengine Ark Responses API](https://www.volcengine.com/docs/82379/1958524)
+- [Volcengine Ark image generation API](https://www.volcengine.com/docs/82379/1541523)
+- [Volcengine Ark Files API overview](https://www.volcengine.com/docs/82379/1885708)
+- [Volcengine Ark file list API](https://www.volcengine.com/docs/82379/1870407)

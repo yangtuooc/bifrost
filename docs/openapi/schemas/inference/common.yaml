@@ -6,10 +6,12 @@ ModelProvider:
   enum:
     - openai
     - azure
+    - aliyun
     - anthropic
     - bedrock
     - cohere
     - vertex
+    - volcengine
     - vllm
     - mistral
     - ollama

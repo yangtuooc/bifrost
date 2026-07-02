@@ -197,10 +197,12 @@ export function getRoutingFields(providers: string[] = [], models: string[] = []
 }
 
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+	aliyun: "Alibaba Cloud",
 	openai: "OpenAI",
 	anthropic: "Anthropic",
 	azure: "Azure OpenAI",
 	gemini: "Google Gemini",
 	vertex: "Vertex AI",
 	cohere: "Cohere",
+	volcengine: "Volcengine",
 };

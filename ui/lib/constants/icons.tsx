@@ -24,8 +24,27 @@ const resolveSize = (size: IconSize): number => {
 	return sizeMap[size] || sizeMap.md;
 };
 
+const RenderImageIcon = ({ src, alt, size = "md", className = "" }: IconProps & { src: string; alt: string }) => {
+	const resolvedSize = resolveSize(size);
+	return (
+		<img
+			src={src}
+			alt={alt}
+			width={resolvedSize}
+			height={resolvedSize}
+			loading="lazy"
+			decoding="async"
+			className={cn("object-contain", className)}
+		/>
+	);
+};
+
 // Provider Icons with theme awareness where applicable
 export const ProviderIcons = {
+	aliyun: ({ size = "md", className = "" }: IconProps) => {
+		return <RenderImageIcon src="/images/aliyun.svg" alt="Alibaba Cloud" size={size} className={className} />;
+	},
+
 	anthropic: ({ size = "md", className = "", theme }: IconProps) => {
 		const resolvedSize = resolveSize(size);
 		return theme === "light" ? (
@@ -466,6 +485,10 @@ export const ProviderIcons = {
 				/>
 			</svg>
 		);
+	},
+
+	volcengine: ({ size = "md", className = "" }: IconProps) => {
+		return <RenderImageIcon src="/images/volcengine.png" alt="Volcengine" size={size} className={className} />;
 	},
 
 	vertex: ({ size = "md", className = "" }: IconProps) => {

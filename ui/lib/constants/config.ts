@@ -26,6 +26,7 @@ function parseTrialExpiry(dateStr: string | undefined): Date | null {
 // Model placeholders based on provider type
 export const ModelPlaceholders = {
 	default: "e.g. gpt-4, gpt-3.5-turbo. Leave blank for all models.",
+	aliyun: "e.g. qwen-plus, qwen-turbo, qwen-max",
 	anthropic: "e.g. claude-3-haiku, claude-2.1",
 	azure: "e.g. gpt-4, gpt-35-turbo (must match alias keys)",
 	bedrock: "e.g. claude-v2, titan-text-express-v1, ai21-j2-mid",
@@ -46,6 +47,7 @@ export const ModelPlaceholders = {
 	"opencode-zen": "e.g. gpt-5.5, claude-sonnet-4-6",
 	openai: "e.g. gpt-4, gpt-4o, gpt-4o-mini, gpt-3.5-turbo",
 	vertex: "e.g. gemini-1.5-pro, text-bison, chat-bison",
+	volcengine: "e.g. doubao-seed-1-6, deepseek-v3, or your Ark endpoint ID",
 	nebius: "e.g. openai/gpt-oss-120b, google/gemma-2-9b-it-fast, Qwen/Qwen2.5-VL-72B-Instruct",
 	xai: "e.g. grok-4-0709, grok-3-mini, grok-3, grok-2-vision-1212",
 	replicate: "e.g. meta/llama3-1-8b-instruct, black-forest-labs/flux-dev",
@@ -56,6 +58,7 @@ export const ModelPlaceholders = {
 };
 
 export const isKeyRequiredByProvider: Record<ProviderName, boolean> = {
+	aliyun: true,
 	anthropic: true,
 	azure: true,
 	bedrock: true,
@@ -75,6 +78,7 @@ export const isKeyRequiredByProvider: Record<ProviderName, boolean> = {
 	"opencode-zen": true,
 	openai: true,
 	vertex: true,
+	volcengine: true,
 	perplexity: true,
 	nebius: true,
 	xai: true,

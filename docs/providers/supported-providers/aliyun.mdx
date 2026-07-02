@@ -1,0 +1,205 @@
+---
+title: "Alibaba Cloud"
+description: "Alibaba Cloud Model Studio / DashScope provider guide for chat, responses, embeddings, image generation, files, batch, streaming, and configuration"
+icon: "cloud"
+---
+
+## Overview
+
+Alibaba Cloud is supported through Model Studio / DashScope APIs. Bifrost treats `aliyun` as a built-in provider with its own provider package. It reuses Bifrost's existing OpenAI wire-format handlers for operations whose request and response shapes are compatible, and uses a provider-specific converter for Qwen-Image because that API is not OpenAI wire-compatible.
+
+The built-in default base URL is:
+
+```text
+https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+For production workloads, Alibaba Cloud recommends workspace-specific regional base URLs such as:
+
+```text
+https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+```
+
+### Supported Operations
+
+| Operation | Bifrost support | Streaming | Upstream endpoint | Notes |
+|-----------|-----------------|-----------|-------------------|-------|
+| List Models | ✅ | - | `/models` | OpenAI-compatible model list format. |
+| Chat Completions | ✅ | ✅ | `/chat/completions` | Uses Alibaba Cloud's OpenAI-compatible Chat API. |
+| Responses API | ✅ | ✅ | `/responses` | Uses Alibaba Cloud's OpenAI-compatible Responses API, not a Chat fallback. |
+| Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
+| Image Generation | ✅ | ❌ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses the Qwen-Image synchronous API. Bifrost converts `1024x1024` style sizes to Alibaba Cloud's `1024*1024` format. |
+| Files | ✅ | - | `/files` | Uses Alibaba Cloud's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
+| Batch | ✅ | - | `/batches` | Uses Alibaba Cloud's OpenAI-compatible Batch File API. Inline `requests` are converted to JSONL and uploaded as a batch file. |
+| Text Completions | ❌ | ❌ | - | Not enabled because Alibaba Cloud documents Chat/Responses compatibility for current Qwen model access. |
+| Image Edit / Variation | ❌ | ❌ | - | Qwen image edit uses a separate provider-specific API and is not mapped in this provider yet. |
+| Speech / Transcription | ❌ | ❌ | - | Qwen-Audio is documented as not supporting the OpenAI-compatible protocol; audio support requires a provider-specific implementation. |
+| Count Tokens | ❌ | - | - | No Bifrost mapping is enabled for this provider. |
+| Video | ❌ | - | - | Native video APIs are not OpenAI wire-compatible with Bifrost's current video abstraction. |
+
+<Note>
+Bifrost appends OpenAI-compatible paths to the configured `network_config.base_url`. If you override the base URL, use the OpenAI-compatible base URL that includes `/compatible-mode/v1`. For Qwen-Image, Bifrost derives the native `/api/v1/services/aigc/multimodal-generation/generation` endpoint from the same host.
+</Note>
+
+## Setup & Configuration
+
+Configure Alibaba Cloud as a provider.
+
+<Tabs>
+<Tab title="Web UI">
+
+1. Navigate to **Models** > **Model Providers**.
+2. Click **Add New Provider** and select **Alibaba Cloud**.
+3. Click **Add Key**.
+4. Paste your DashScope API key directly or use an environment variable such as `env.DASHSCOPE_API_KEY`.
+5. Set **Allowed Models** to `*` or to specific model IDs such as `qwen-plus`.
+6. Save the provider configuration.
+
+</Tab>
+<Tab title="config.json">
+
+```json
+{
+  "providers": {
+    "aliyun": {
+      "keys": [
+        {
+          "name": "aliyun-key-1",
+          "value": "env.DASHSCOPE_API_KEY",
+          "models": ["*"],
+          "weight": 1.0
+        }
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Go SDK">
+
+```go
+case schemas.Aliyun:
+    return []schemas.Key{{
+        Name:   "aliyun-key-1",
+        Value:  *schemas.NewEnvVar("env.DASHSCOPE_API_KEY"),
+        Models: []string{"*"},
+        Weight: 1.0,
+    }}, nil
+```
+
+</Tab>
+</Tabs>
+
+## Chat Completions
+
+Use the unified Bifrost endpoint with an `aliyun/<model>` model string:
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen-plus",
+    "messages": [
+      {"role": "user", "content": "Reply with exactly: aliyun ok"}
+    ]
+  }'
+```
+
+## Responses API
+
+Use the same Bifrost Responses endpoint with an `aliyun/<model>` model string:
+
+```bash
+curl -X POST http://localhost:8080/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen-plus",
+    "input": "Reply with exactly: aliyun responses ok"
+  }'
+```
+
+## Embeddings
+
+Use Alibaba Cloud embedding models through Bifrost's unified embedding endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/text-embedding-v4",
+    "input": "A short sentence to embed."
+  }'
+```
+
+## Image Generation
+
+Use Qwen-Image models through Bifrost's unified image generation endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen-image-2.0-pro",
+    "prompt": "A clean product sketch on a white background",
+    "size": "1024x1024"
+  }'
+```
+
+Alibaba Cloud's Qwen-Image API returns temporary image URLs. Bifrost maps those URLs into the standard `data[].url` field. `response_format=b64_json` is not produced by the upstream Qwen-Image synchronous API.
+
+## Files
+
+Upload files through Bifrost's unified Files API. For Alibaba Cloud document extraction, use provider-supported purposes such as `file-extract`; for Batch, use `batch`.
+
+```bash
+curl -X POST http://localhost:8080/v1/files \
+  -H "Content-Type: multipart/form-data" \
+  -F 'provider=aliyun' \
+  -F 'purpose=batch' \
+  -F 'file=@requests.jsonl'
+```
+
+## Batch
+
+Create a file-based Batch job after uploading a JSONL input file:
+
+```bash
+curl -X POST http://localhost:8080/v1/batches \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "aliyun",
+    "input_file_id": "file-batch-xxx",
+    "endpoint": "/v1/chat/completions",
+    "completion_window": "24h"
+  }'
+```
+
+## Streaming
+
+Streaming uses the same OpenAI-compatible SSE format:
+
+```bash
+curl -N -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen-plus",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "Write one short sentence."}
+    ]
+  }'
+```
+
+## Capability Boundary
+
+Unsupported operations return Bifrost's standard `unsupported_operation` error. This is intentional for capabilities that either are not documented as OpenAI-compatible by Alibaba Cloud, or require provider-specific APIs outside the OpenAI-compatible base URL configured for this provider.
+
+Official references:
+
+- [Alibaba Cloud Model Studio OpenAI-compatible Chat](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope)
+- [Alibaba Cloud Model Studio OpenAI-compatible Responses API](https://help.aliyun.com/zh/model-studio/compatibility-with-openai-responses-api)
+- [Alibaba Cloud Model Studio OpenAI-compatible embeddings](https://help.aliyun.com/zh/model-studio/embedding-interfaces-compatible-with-openai)
+- [Alibaba Cloud Model Studio OpenAI-compatible files](https://help.aliyun.com/zh/model-studio/openai-file-interface)
+- [Alibaba Cloud Model Studio OpenAI-compatible batch](https://help.aliyun.com/zh/model-studio/batch-interfaces-compatible-with-openai/)
+- [Alibaba Cloud Model Studio Qwen-Image API](https://help.aliyun.com/zh/model-studio/qwen-image-api)

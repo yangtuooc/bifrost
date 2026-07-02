@@ -2,7 +2,11 @@ package bifrost
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"strings"
 	"sync"
@@ -2916,6 +2920,600 @@ func TestClearAnthropicPassthroughForNonNativeProvider(t *testing.T) {
 				if got != want {
 					t.Errorf("flag %v = %v, want %v", k, got, want)
 				}
+			}
+		})
+	}
+}
+
+func TestDomesticProviders(t *testing.T) {
+	tests := []struct {
+		name                   string
+		providerKey            schemas.ModelProvider
+		supportsImages         bool
+		supportsImageStreaming bool
+		imagePath              string
+		supportsFiles          bool
+		supportsBatch          bool
+	}{
+		{name: "Aliyun", providerKey: schemas.Aliyun, supportsImages: true, imagePath: "/api/v1/services/aigc/multimodal-generation/generation", supportsFiles: true, supportsBatch: true},
+		{name: "Volcengine", providerKey: schemas.Volcengine, supportsImages: true, supportsImageStreaming: true, imagePath: "/images/generations", supportsFiles: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var mu sync.Mutex
+			paths := map[string]int{}
+			var authorization string
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, _ := io.ReadAll(r.Body)
+				mu.Lock()
+				paths[r.URL.Path]++
+				authorization = r.Header.Get("Authorization")
+				mu.Unlock()
+
+				switch r.URL.Path {
+				case "/chat/completions":
+					if strings.Contains(string(body), "rate-limit") {
+						w.WriteHeader(http.StatusTooManyRequests)
+						_, _ = w.Write([]byte(`{"error":{"message":"too many requests","type":"rate_limit_error","code":"rate_limit_exceeded"}}`))
+						return
+					}
+					if strings.Contains(string(body), "auth-fail") {
+						w.WriteHeader(http.StatusUnauthorized)
+						_, _ = w.Write([]byte(`{"error":{"message":"invalid api key","type":"invalid_request_error","code":"invalid_api_key"}}`))
+						return
+					}
+					if strings.Contains(string(body), "server-error") {
+						w.WriteHeader(http.StatusInternalServerError)
+						_, _ = w.Write([]byte(`{"error":{"message":"provider failed","type":"server_error","code":"internal_error"}}`))
+						return
+					}
+					if strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
+						w.Header().Set("Content-Type", "text/event-stream")
+						_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-stream\",\"object\":\"chat.completion.chunk\",\"created\":123,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"hello\"},\"finish_reason\":null}]}\n\n"))
+						_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-stream\",\"object\":\"chat.completion.chunk\",\"created\":123,\"model\":\"test-model\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"))
+						_, _ = w.Write([]byte("data: [DONE]\n\n"))
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+						"id": "chatcmpl-test",
+						"object": "chat.completion",
+						"created": 123,
+						"model": "test-model",
+						"choices": [{
+							"index": 0,
+							"message": {"role": "assistant", "content": "hello"},
+							"finish_reason": "stop"
+						}],
+						"usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}
+					}`))
+				case "/responses":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+						"id": "resp-test",
+						"object": "response",
+						"created_at": 123,
+						"model": "test-model",
+						"output": [],
+						"tools": [],
+						"usage": null,
+						"error": null,
+						"incomplete_details": null,
+						"instructions": null,
+						"max_output_tokens": null,
+						"previous_response_id": null,
+						"reasoning": null,
+						"safety_identifier": null,
+						"service_tier": null
+					}`))
+				case "/embeddings":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+						"object": "list",
+						"model": "test-embedding-model",
+						"data": [{"object":"embedding","index":0,"embedding":[0.1,0.2]}],
+						"usage": {"prompt_tokens": 1, "total_tokens": 1}
+					}`))
+				case "/images/generations":
+					if strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
+						w.Header().Set("Content-Type", "text/event-stream")
+						_, _ = w.Write([]byte("data: {\"type\":\"image_generation.partial_image\",\"sequence_number\":1,\"partial_image_index\":0,\"b64_json\":\"abc\"}\n\n"))
+						_, _ = w.Write([]byte("data: {\"type\":\"image_generation.completed\",\"sequence_number\":2,\"partial_image_index\":0,\"b64_json\":\"abcd\",\"usage\":{\"output_tokens\":1,\"total_tokens\":1}}\n\n"))
+						_, _ = w.Write([]byte("data: [DONE]\n\n"))
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"created": 123,
+							"data": [{"url": "https://example.com/image.png"}]
+						}`))
+				case "/api/v1/services/aigc/multimodal-generation/generation":
+					var payload map[string]interface{}
+					if err := json.Unmarshal(body, &payload); err != nil {
+						t.Errorf("aliyun image request is not valid JSON: %v", err)
+					}
+					if payload["model"] != "test-image-model" {
+						t.Errorf("aliyun image model = %v, want test-image-model", payload["model"])
+					}
+					parameters, _ := payload["parameters"].(map[string]interface{})
+					if parameters["size"] != "1024*1024" {
+						t.Errorf("aliyun image size = %v, want 1024*1024", parameters["size"])
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"request_id": "aliyun-image-request",
+							"output": {
+								"choices": [{
+									"finish_reason": "stop",
+									"message": {
+										"role": "assistant",
+										"content": [{"image": "https://example.com/aliyun-image.png"}]
+									}
+								}]
+							},
+							"usage": {"width": 1024, "height": 1024, "image_count": 1}
+						}`))
+				case "/models":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"object": "list",
+							"data": [{"id": "test-model", "object": "model", "created": 123, "owned_by": "test"}]
+						}`))
+				case "/files":
+					w.Header().Set("Content-Type", "application/json")
+					if r.Method == http.MethodPost {
+						if !strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+							t.Errorf("file upload content type = %q, want multipart/form-data", r.Header.Get("Content-Type"))
+						}
+						_, _ = w.Write([]byte(`{
+								"id": "file-test",
+								"object": "file",
+								"bytes": 12,
+								"created_at": 123,
+								"filename": "test.jsonl",
+								"purpose": "batch",
+								"status": "processed"
+							}`))
+						return
+					}
+					_, _ = w.Write([]byte(`{
+							"object": "list",
+							"data": [{
+								"id": "file-test",
+								"object": "file",
+								"bytes": 12,
+								"created_at": 123,
+								"filename": "test.jsonl",
+								"purpose": "batch",
+								"status": "processed"
+							}],
+							"has_more": false
+						}`))
+				case "/files/file-test":
+					w.Header().Set("Content-Type", "application/json")
+					if r.Method == http.MethodDelete {
+						_, _ = w.Write([]byte(`{
+								"id": "file-test",
+								"object": "file",
+								"deleted": true
+							}`))
+						return
+					}
+					_, _ = w.Write([]byte(`{
+							"id": "file-test",
+							"object": "file",
+							"bytes": 12,
+							"created_at": 123,
+							"filename": "test.jsonl",
+							"purpose": "batch",
+							"status": "processed"
+						}`))
+				case "/files/file-output/content":
+					w.Header().Set("Content-Type", "application/jsonl")
+					_, _ = w.Write([]byte("{\"custom_id\":\"1\",\"response\":{\"status_code\":200,\"body\":{\"ok\":true}}}\n"))
+				case "/files/file-test/content":
+					w.Header().Set("Content-Type", "application/octet-stream")
+					_, _ = w.Write([]byte("file content"))
+				case "/batches":
+					w.Header().Set("Content-Type", "application/json")
+					if r.Method == http.MethodPost {
+						_, _ = w.Write([]byte(`{
+								"id": "batch-test",
+								"object": "batch",
+								"endpoint": "/v1/chat/completions",
+								"input_file_id": "file-test",
+								"completion_window": "24h",
+								"status": "validating",
+								"created_at": 123,
+								"request_counts": {"total": 1, "completed": 0, "failed": 0}
+							}`))
+						return
+					}
+					_, _ = w.Write([]byte(`{
+							"object": "list",
+							"data": [{
+								"id": "batch-test",
+								"object": "batch",
+								"endpoint": "/v1/chat/completions",
+								"input_file_id": "file-test",
+								"completion_window": "24h",
+								"status": "completed",
+								"created_at": 123,
+								"output_file_id": "file-output",
+								"request_counts": {"total": 1, "completed": 1, "failed": 0}
+							}],
+							"has_more": false
+						}`))
+				case "/batches/batch-test":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"id": "batch-test",
+							"object": "batch",
+							"endpoint": "/v1/chat/completions",
+							"input_file_id": "file-test",
+							"completion_window": "24h",
+							"status": "completed",
+							"created_at": 123,
+							"output_file_id": "file-output",
+							"request_counts": {"total": 1, "completed": 1, "failed": 0}
+						}`))
+				case "/batches/batch-test/cancel":
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{
+							"id": "batch-test",
+							"object": "batch",
+							"status": "cancelled",
+							"request_counts": {"total": 1, "completed": 0, "failed": 0}
+						}`))
+				default:
+					http.Error(w, "unexpected request path: "+r.URL.Path, http.StatusNotFound)
+				}
+			}))
+			defer server.Close()
+
+			cfg := &schemas.ProviderConfig{
+				NetworkConfig: schemas.NetworkConfig{
+					BaseURL: server.URL,
+				},
+			}
+			provider, err := (&Bifrost{logger: NewDefaultLogger(schemas.LogLevelError)}).createBaseProvider(tt.providerKey, cfg)
+			if err != nil {
+				t.Fatalf("createBaseProvider returned error: %v", err)
+			}
+			if provider.GetProviderKey() != tt.providerKey {
+				t.Fatalf("provider key = %s, want %s", provider.GetProviderKey(), tt.providerKey)
+			}
+
+			ctx := schemas.NewBifrostContext(context.Background(), schemas.NoDeadline)
+			userContent := "hi"
+			chatResp, bifrostErr := provider.ChatCompletion(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostChatRequest{
+				Provider: tt.providerKey,
+				Model:    "test-model",
+				Input: []schemas.ChatMessage{
+					{
+						Role:    schemas.ChatMessageRoleUser,
+						Content: &schemas.ChatMessageContent{ContentStr: &userContent},
+					},
+				},
+				Params: &schemas.ChatParameters{},
+			})
+			if bifrostErr != nil {
+				t.Fatalf("ChatCompletion returned error: %v", bifrostErr.Error.Message)
+			}
+			if chatResp == nil || chatResp.Model != "test-model" {
+				t.Fatalf("unexpected chat response: %#v", chatResp)
+			}
+			if authorization != "Bearer test-key" {
+				t.Fatalf("authorization = %q, want Bearer test-key", authorization)
+			}
+
+			stream, bifrostErr := provider.ChatCompletionStream(ctx, func(_ *schemas.BifrostContext, result *schemas.BifrostResponse, err *schemas.BifrostError) (*schemas.BifrostResponse, *schemas.BifrostError) {
+				return result, err
+			}, nil, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostChatRequest{
+				Provider: tt.providerKey,
+				Model:    "test-model",
+				Input: []schemas.ChatMessage{
+					{
+						Role:    schemas.ChatMessageRoleUser,
+						Content: &schemas.ChatMessageContent{ContentStr: &userContent},
+					},
+				},
+				Params: &schemas.ChatParameters{},
+			})
+			if bifrostErr != nil {
+				t.Fatalf("ChatCompletionStream returned error: %v", bifrostErr.Error.Message)
+			}
+			var streamChunks int
+			streamTimeout := time.After(5 * time.Second)
+		streamLoop:
+			for {
+				select {
+				case chunk, ok := <-stream:
+					if !ok {
+						break streamLoop
+					}
+					if chunk != nil && chunk.BifrostError != nil {
+						t.Fatalf("unexpected stream error chunk: %#v", chunk.BifrostError)
+					}
+					if chunk != nil {
+						streamChunks++
+					}
+				case <-streamTimeout:
+					t.Fatal("timed out waiting for chat stream to close")
+				}
+			}
+			if streamChunks == 0 {
+				t.Fatal("expected at least one chat stream chunk")
+			}
+
+			modelsResp, bifrostErr := provider.ListModels(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}, Models: schemas.WhiteList{"*"}}}, &schemas.BifrostListModelsRequest{})
+			if bifrostErr != nil {
+				t.Fatalf("ListModels returned error: %v", bifrostErr.Error.Message)
+			}
+			expectedModelID := string(tt.providerKey) + "/test-model"
+			if modelsResp == nil || len(modelsResp.Data) != 1 || modelsResp.Data[0].ID != expectedModelID {
+				t.Fatalf("unexpected models response: %#v", modelsResp)
+			}
+
+			responsesResp, bifrostErr := provider.Responses(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostResponsesRequest{Model: "test-model"})
+			if bifrostErr != nil {
+				t.Fatalf("Responses returned error: %v", bifrostErr.Error.Message)
+			}
+			if responsesResp == nil || responsesResp.Model != "test-model" {
+				t.Fatalf("unexpected responses response: %#v", responsesResp)
+			}
+
+			embedText := "embed me"
+			embeddingResp, bifrostErr := provider.Embedding(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostEmbeddingRequest{
+				Provider: tt.providerKey,
+				Model:    "test-embedding-model",
+				Input:    &schemas.EmbeddingInput{Text: &embedText},
+			})
+			if bifrostErr != nil {
+				t.Fatalf("Embedding returned error: %v", bifrostErr.Error.Message)
+			}
+			if embeddingResp == nil || embeddingResp.Model != "test-embedding-model" || len(embeddingResp.Data) != 1 {
+				t.Fatalf("unexpected embedding response: %#v", embeddingResp)
+			}
+
+			if tt.supportsImages {
+				size := "1024x1024"
+				imageResp, bifrostErr := provider.ImageGeneration(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostImageGenerationRequest{
+					Provider: tt.providerKey,
+					Model:    "test-image-model",
+					Input:    &schemas.ImageGenerationInput{Prompt: "draw a test image"},
+					Params:   &schemas.ImageGenerationParameters{Size: &size},
+				})
+				if bifrostErr != nil {
+					t.Fatalf("ImageGeneration returned error: %v", bifrostErr.Error.Message)
+				}
+				if imageResp == nil || len(imageResp.Data) != 1 || imageResp.Data[0].URL == "" {
+					t.Fatalf("unexpected image response: %#v", imageResp)
+				}
+
+				if tt.supportsImageStreaming {
+					imageStreamCtx := schemas.NewBifrostContext(context.Background(), schemas.NoDeadline)
+					imageStream, streamErr := provider.ImageGenerationStream(imageStreamCtx, func(_ *schemas.BifrostContext, result *schemas.BifrostResponse, err *schemas.BifrostError) (*schemas.BifrostResponse, *schemas.BifrostError) {
+						return result, err
+					}, nil, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostImageGenerationRequest{
+						Provider: tt.providerKey,
+						Model:    "test-image-model",
+						Input:    &schemas.ImageGenerationInput{Prompt: "draw a streamed test image"},
+						Params:   &schemas.ImageGenerationParameters{Size: &size},
+					})
+					if streamErr != nil {
+						t.Fatalf("ImageGenerationStream returned error: %v", streamErr.Error.Message)
+					}
+					imageStreamChunks := 0
+					imageStreamTimeout := time.After(5 * time.Second)
+				imageStreamLoop:
+					for {
+						select {
+						case chunk, ok := <-imageStream:
+							if !ok {
+								break imageStreamLoop
+							}
+							if chunk != nil && chunk.BifrostError != nil {
+								t.Fatalf("unexpected image stream error chunk: %s (%#v)", chunk.BifrostError.GetErrorString(), chunk.BifrostError)
+							}
+							if chunk != nil {
+								imageStreamChunks++
+							}
+						case <-imageStreamTimeout:
+							t.Fatal("timed out waiting for image stream to close")
+						}
+					}
+					if imageStreamChunks == 0 {
+						t.Fatal("expected at least one image stream chunk")
+					}
+				}
+			}
+
+			if tt.supportsFiles {
+				fileResp, bifrostErr := provider.FileUpload(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostFileUploadRequest{
+					Provider: tt.providerKey,
+					Filename: "test.jsonl",
+					Purpose:  schemas.FilePurposeBatch,
+					File:     []byte(`{"custom_id":"1"}`),
+				})
+				if bifrostErr != nil {
+					t.Fatalf("FileUpload returned error: %v", bifrostErr.Error.Message)
+				}
+				if fileResp == nil || fileResp.ID != "file-test" || fileResp.Status != schemas.FileStatusProcessed {
+					t.Fatalf("unexpected file upload response: %#v", fileResp)
+				}
+
+				fileListResp, bifrostErr := provider.FileList(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostFileListRequest{Provider: tt.providerKey})
+				if bifrostErr != nil {
+					t.Fatalf("FileList returned error: %v", bifrostErr.Error.Message)
+				}
+				if fileListResp == nil || len(fileListResp.Data) != 1 || fileListResp.Data[0].ID != "file-test" {
+					t.Fatalf("unexpected file list response: %#v", fileListResp)
+				}
+
+				fileRetrieveResp, bifrostErr := provider.FileRetrieve(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostFileRetrieveRequest{
+					Provider: tt.providerKey,
+					FileID:   "file-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("FileRetrieve returned error: %v", bifrostErr.Error.Message)
+				}
+				if fileRetrieveResp == nil || fileRetrieveResp.ID != "file-test" {
+					t.Fatalf("unexpected file retrieve response: %#v", fileRetrieveResp)
+				}
+
+				fileContentResp, bifrostErr := provider.FileContent(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostFileContentRequest{
+					Provider: tt.providerKey,
+					FileID:   "file-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("FileContent returned error: %v", bifrostErr.Error.Message)
+				}
+				if fileContentResp == nil || string(fileContentResp.Content) != "file content" {
+					t.Fatalf("unexpected file content response: %#v", fileContentResp)
+				}
+
+				fileDeleteResp, bifrostErr := provider.FileDelete(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostFileDeleteRequest{
+					Provider: tt.providerKey,
+					FileID:   "file-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("FileDelete returned error: %v", bifrostErr.Error.Message)
+				}
+				if fileDeleteResp == nil || !fileDeleteResp.Deleted {
+					t.Fatalf("unexpected file delete response: %#v", fileDeleteResp)
+				}
+			}
+
+			if tt.supportsBatch {
+				batchResp, bifrostErr := provider.BatchCreate(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostBatchCreateRequest{
+					Provider:       tt.providerKey,
+					InputFileID:    "file-test",
+					Endpoint:       schemas.BatchEndpointChatCompletions,
+					Metadata:       map[string]string{"case": "domestic-provider"},
+					RawRequestBody: nil,
+				})
+				if bifrostErr != nil {
+					t.Fatalf("BatchCreate returned error: %v", bifrostErr.Error.Message)
+				}
+				if batchResp == nil || batchResp.ID != "batch-test" || batchResp.Status != schemas.BatchStatusValidating {
+					t.Fatalf("unexpected batch create response: %#v", batchResp)
+				}
+
+				batchListResp, bifrostErr := provider.BatchList(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostBatchListRequest{Provider: tt.providerKey})
+				if bifrostErr != nil {
+					t.Fatalf("BatchList returned error: %v", bifrostErr.Error.Message)
+				}
+				if batchListResp == nil || len(batchListResp.Data) != 1 || batchListResp.Data[0].ID != "batch-test" {
+					t.Fatalf("unexpected batch list response: %#v", batchListResp)
+				}
+
+				batchRetrieveResp, bifrostErr := provider.BatchRetrieve(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostBatchRetrieveRequest{
+					Provider: tt.providerKey,
+					BatchID:  "batch-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("BatchRetrieve returned error: %v", bifrostErr.Error.Message)
+				}
+				if batchRetrieveResp == nil || batchRetrieveResp.OutputFileID == nil || *batchRetrieveResp.OutputFileID != "file-output" {
+					t.Fatalf("unexpected batch retrieve response: %#v", batchRetrieveResp)
+				}
+
+				batchCancelResp, bifrostErr := provider.BatchCancel(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostBatchCancelRequest{
+					Provider: tt.providerKey,
+					BatchID:  "batch-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("BatchCancel returned error: %v", bifrostErr.Error.Message)
+				}
+				if batchCancelResp == nil || batchCancelResp.Status != schemas.BatchStatusCancelled {
+					t.Fatalf("unexpected batch cancel response: %#v", batchCancelResp)
+				}
+
+				batchResultsResp, bifrostErr := provider.BatchResults(ctx, []schemas.Key{{Value: schemas.SecretVar{Val: "test-key"}}}, &schemas.BifrostBatchResultsRequest{
+					Provider: tt.providerKey,
+					BatchID:  "batch-test",
+				})
+				if bifrostErr != nil {
+					t.Fatalf("BatchResults returned error: %v", bifrostErr.Error.Message)
+				}
+				if batchResultsResp == nil || len(batchResultsResp.Results) != 1 || batchResultsResp.Results[0].CustomID != "1" {
+					t.Fatalf("unexpected batch results response: %#v", batchResultsResp)
+				}
+			}
+
+			errorCases := []struct {
+				model      string
+				statusCode int
+				code       string
+			}{
+				{model: "rate-limit", statusCode: http.StatusTooManyRequests, code: "rate_limit_exceeded"},
+				{model: "auth-fail", statusCode: http.StatusUnauthorized, code: "invalid_api_key"},
+				{model: "server-error", statusCode: http.StatusInternalServerError, code: "internal_error"},
+			}
+			for _, errorCase := range errorCases {
+				_, bifrostErr = provider.ChatCompletion(ctx, schemas.Key{Value: schemas.SecretVar{Val: "test-key"}}, &schemas.BifrostChatRequest{
+					Provider: tt.providerKey,
+					Model:    errorCase.model,
+					Input: []schemas.ChatMessage{
+						{
+							Role:    schemas.ChatMessageRoleUser,
+							Content: &schemas.ChatMessageContent{ContentStr: &userContent},
+						},
+					},
+					Params: &schemas.ChatParameters{},
+				})
+				if bifrostErr == nil || bifrostErr.StatusCode == nil || *bifrostErr.StatusCode != errorCase.statusCode {
+					t.Fatalf("expected %d error for %s, got %#v", errorCase.statusCode, errorCase.model, bifrostErr)
+				}
+				if bifrostErr.Error == nil || bifrostErr.Error.Code == nil || *bifrostErr.Error.Code != errorCase.code {
+					t.Fatalf("expected %s code for %s, got %#v", errorCase.code, errorCase.model, bifrostErr)
+				}
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			if paths["/chat/completions"] < 3 {
+				t.Fatalf("chat completions path count = %d, want at least 3", paths["/chat/completions"])
+			}
+			if paths["/models"] != 1 {
+				t.Fatalf("models path count = %d, want 1", paths["/models"])
+			}
+			if paths["/responses"] != 1 {
+				t.Fatalf("responses path count = %d, want 1", paths["/responses"])
+			}
+			if paths["/embeddings"] != 1 {
+				t.Fatalf("embeddings path count = %d, want 1", paths["/embeddings"])
+			}
+			expectedImagePathCount := 1
+			if tt.supportsImageStreaming {
+				expectedImagePathCount = 2
+			}
+			if tt.supportsImages && paths[tt.imagePath] != expectedImagePathCount {
+				t.Fatalf("images path count = %d, want %d for %s", paths[tt.imagePath], expectedImagePathCount, tt.imagePath)
+			}
+			if tt.supportsFiles && paths["/files"] < 2 {
+				t.Fatalf("files path count = %d, want at least 2", paths["/files"])
+			}
+			if tt.supportsFiles && paths["/files/file-test"] != 2 {
+				t.Fatalf("file metadata path count = %d, want 2", paths["/files/file-test"])
+			}
+			if tt.supportsFiles && paths["/files/file-test/content"] != 1 {
+				t.Fatalf("file content path count = %d, want 1", paths["/files/file-test/content"])
+			}
+			if tt.supportsBatch && paths["/batches"] != 2 {
+				t.Fatalf("batches path count = %d, want 2", paths["/batches"])
+			}
+			if tt.supportsBatch && paths["/batches/batch-test"] != 2 {
+				t.Fatalf("batch retrieve path count = %d, want 2", paths["/batches/batch-test"])
+			}
+			if tt.supportsBatch && paths["/batches/batch-test/cancel"] != 1 {
+				t.Fatalf("batch cancel path count = %d, want 1", paths["/batches/batch-test/cancel"])
+			}
+			if tt.supportsBatch && paths["/files/file-output/content"] != 1 {
+				t.Fatalf("batch output content path count = %d, want 1", paths["/files/file-output/content"])
 			}
 		})
 	}

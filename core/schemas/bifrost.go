@@ -43,11 +43,13 @@ type ModelProvider string
 const (
 	OpenAI        ModelProvider = "openai"
 	Azure         ModelProvider = "azure"
+	Aliyun        ModelProvider = "aliyun"
 	Anthropic     ModelProvider = "anthropic"
 	Bedrock       ModelProvider = "bedrock"
 	BedrockMantle ModelProvider = "bedrock_mantle"
 	Cohere        ModelProvider = "cohere"
 	Vertex        ModelProvider = "vertex"
+	Volcengine    ModelProvider = "volcengine"
 	Mistral       ModelProvider = "mistral"
 	Ollama        ModelProvider = "ollama"
 	OpencodeGo    ModelProvider = "opencode-go"
@@ -84,6 +86,7 @@ var SupportedBaseProviders = []ModelProvider{
 // StandardProviders is the list of all built-in (non-custom) providers.
 var StandardProviders = []ModelProvider{
 	Anthropic,
+	Aliyun,
 	Azure,
 	Bedrock,
 	BedrockMantle,
@@ -100,6 +103,7 @@ var StandardProviders = []ModelProvider{
 	Perplexity,
 	SGL,
 	Vertex,
+	Volcengine,
 	OpenRouter,
 	Elevenlabs,
 	HuggingFace,
