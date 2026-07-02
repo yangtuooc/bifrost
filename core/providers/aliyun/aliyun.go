@@ -75,12 +75,42 @@ func (provider *AliyunProvider) ListModels(ctx *schemas.BifrostContext, keys []s
 	)
 }
 
-func (provider *AliyunProvider) TextCompletion(_ *schemas.BifrostContext, _ schemas.Key, _ *schemas.BifrostTextCompletionRequest) (*schemas.BifrostTextCompletionResponse, *schemas.BifrostError) {
-	return nil, providerUtils.NewUnsupportedOperationError(schemas.TextCompletionRequest, provider.GetProviderKey())
+func (provider *AliyunProvider) TextCompletion(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostTextCompletionRequest) (*schemas.BifrostTextCompletionResponse, *schemas.BifrostError) {
+	return openai.HandleOpenAITextCompletionRequest(
+		ctx,
+		provider.client,
+		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/completions"),
+		request,
+		openai.BearerAuthHeader(key),
+		provider.networkConfig.ExtraHeaders,
+		provider.GetProviderKey(),
+		providerUtils.ShouldSendBackRawRequest(ctx, provider.sendBackRawRequest),
+		providerUtils.ShouldSendBackRawResponse(ctx, provider.sendBackRawResponse),
+		nil,
+		nil,
+		provider.logger,
+	)
 }
 
-func (provider *AliyunProvider) TextCompletionStream(_ *schemas.BifrostContext, _ schemas.PostHookRunner, _ func(context.Context), _ schemas.Key, _ *schemas.BifrostTextCompletionRequest) (chan *schemas.BifrostStreamChunk, *schemas.BifrostError) {
-	return nil, providerUtils.NewUnsupportedOperationError(schemas.TextCompletionStreamRequest, provider.GetProviderKey())
+func (provider *AliyunProvider) TextCompletionStream(ctx *schemas.BifrostContext, postHookRunner schemas.PostHookRunner, postHookSpanFinalizer func(context.Context), key schemas.Key, request *schemas.BifrostTextCompletionRequest) (chan *schemas.BifrostStreamChunk, *schemas.BifrostError) {
+	return openai.HandleOpenAITextCompletionStreaming(
+		ctx,
+		provider.streamingClient,
+		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/completions"),
+		request,
+		openai.BearerAuthHeader(key),
+		provider.networkConfig.ExtraHeaders,
+		provider.networkConfig.StreamIdleTimeoutInSeconds,
+		providerUtils.ShouldSendBackRawRequest(ctx, provider.sendBackRawRequest),
+		providerUtils.ShouldSendBackRawResponse(ctx, provider.sendBackRawResponse),
+		provider.GetProviderKey(),
+		nil,
+		postHookRunner,
+		nil,
+		nil,
+		provider.logger,
+		postHookSpanFinalizer,
+	)
 }
 
 func (provider *AliyunProvider) ChatCompletion(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostChatRequest) (*schemas.BifrostChatResponse, *schemas.BifrostError) {
@@ -222,8 +252,8 @@ func (provider *AliyunProvider) ImageGenerationStream(_ *schemas.BifrostContext,
 	return nil, providerUtils.NewUnsupportedOperationError(schemas.ImageGenerationStreamRequest, provider.GetProviderKey())
 }
 
-func (provider *AliyunProvider) ImageEdit(_ *schemas.BifrostContext, _ schemas.Key, _ *schemas.BifrostImageEditRequest) (*schemas.BifrostImageGenerationResponse, *schemas.BifrostError) {
-	return nil, providerUtils.NewUnsupportedOperationError(schemas.ImageEditRequest, provider.GetProviderKey())
+func (provider *AliyunProvider) ImageEdit(ctx *schemas.BifrostContext, key schemas.Key, request *schemas.BifrostImageEditRequest) (*schemas.BifrostImageGenerationResponse, *schemas.BifrostError) {
+	return provider.handleImageEdit(ctx, key, request)
 }
 
 func (provider *AliyunProvider) ImageEditStream(_ *schemas.BifrostContext, _ schemas.PostHookRunner, _ func(context.Context), _ schemas.Key, _ *schemas.BifrostImageEditRequest) (chan *schemas.BifrostStreamChunk, *schemas.BifrostError) {

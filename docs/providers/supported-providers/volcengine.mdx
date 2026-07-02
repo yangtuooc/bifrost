@@ -1,6 +1,6 @@
 ---
 title: "Volcengine"
-description: "Volcengine Ark provider guide for OpenAI-compatible chat, responses, embeddings, image generation, streaming, and configuration"
+description: "Volcengine Ark provider guide for OpenAI-compatible chat, responses, embeddings, image generation, video generation, streaming, and configuration"
 icon: "mountain"
 ---
 
@@ -24,12 +24,13 @@ https://ark.cn-beijing.volces.com/api/v3
 | Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
 | Image Generation | ✅ | ✅ | `/images/generations` | Uses Ark's OpenAI-compatible image generation API. |
 | Files | ✅ | - | `/files` | Uses Ark's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
+| Video Generation / Retrieve / Download | ✅ | - | `/contents/generations/tasks` | Uses Ark's native asynchronous video generation task API and maps task lifecycle into Bifrost's Video API abstraction. List and delete are not enabled because they are not part of the documented task flow for this integration. |
 | Text Completions | ❌ | ❌ | - | Not enabled because Ark's documented OpenAI-compatible model calls focus on Chat/Responses. |
 | Image Edit / Variation | ❌ | ❌ | - | Not documented as OpenAI-compatible for Ark in this integration. |
 | Speech / Transcription | ❌ | ❌ | - | No Bifrost OpenAI-compatible audio mapping is enabled for Ark. |
 | Batch | ❌ | - | - | No Bifrost batch mapping is enabled for Ark. |
 | Count Tokens | ❌ | - | - | No Bifrost mapping is enabled for this provider. |
-| Video | ❌ | - | - | Ark video generation uses provider-specific async task APIs, not Bifrost's OpenAI video wire format. |
+| Video Remix | ❌ | - | - | Ark video remix is not mapped in this provider. |
 
 <Note>
 Bifrost appends provider paths to the configured `network_config.base_url`. If you override the base URL, use the Ark OpenAI-compatible base URL that includes `/api/v3`.
@@ -152,6 +153,26 @@ curl -X POST http://localhost:8080/v1/files \
   -F 'file=@input.txt'
 ```
 
+## Video Generation
+
+Use Ark video generation models through Bifrost's unified Video API. Bifrost maps the Bifrost request into Ark's native asynchronous task API.
+
+```bash
+curl -X POST http://localhost:8080/v1/videos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seedance",
+    "prompt": "A compact product video on a clean white background",
+    "seconds": "5",
+    "size": "720p",
+    "extra_body": {
+      "ratio": "16:9"
+    }
+  }'
+```
+
+Retrieve and download generated videos through Bifrost's standard Video endpoints. The provider uses Ark task IDs as Bifrost video IDs and maps completed task `video_url` values into `videos[].url`. Video list and delete return `unsupported_operation`.
+
 ## Streaming
 
 Chat streaming uses the same OpenAI-compatible SSE format:
@@ -191,5 +212,7 @@ Official references:
 - [Volcengine Ark Chat API](https://www.volcengine.com/docs/82379/1494384)
 - [Volcengine Ark Responses API](https://www.volcengine.com/docs/82379/1958524)
 - [Volcengine Ark image generation API](https://www.volcengine.com/docs/82379/1541523)
+- [Volcengine Ark video generation API](https://www.volcengine.com/docs/82379/1520757)
+- [Volcengine Ark video task query API](https://www.volcengine.com/docs/82379/1521309)
 - [Volcengine Ark Files API overview](https://www.volcengine.com/docs/82379/1885708)
 - [Volcengine Ark file list API](https://www.volcengine.com/docs/82379/1870407)

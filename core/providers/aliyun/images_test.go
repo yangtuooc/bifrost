@@ -83,6 +83,46 @@ func TestToBifrostImageGenerationResponse(t *testing.T) {
 	}
 }
 
+func TestToAliyunImageEditRequest(t *testing.T) {
+	size := "1024x1024"
+	negativePrompt := "blur"
+	req, err := ToAliyunImageEditRequest(&schemas.BifrostImageEditRequest{
+		Model: "qwen-image-edit",
+		Input: &schemas.ImageEditInput{
+			Prompt: "replace the background",
+			Images: []schemas.ImageInput{
+				{Image: []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}},
+			},
+		},
+		Params: &schemas.ImageEditParameters{
+			Size:           &size,
+			NegativePrompt: &negativePrompt,
+			ExtraParams: map[string]interface{}{
+				"watermark": false,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ToAliyunImageEditRequest returned error: %v", err)
+	}
+	if req.Model != "qwen-image-edit" {
+		t.Fatalf("model = %q, want qwen-image-edit", req.Model)
+	}
+	content := req.Input.Messages[0].Content
+	if len(content) != 2 {
+		t.Fatalf("content length = %d, want 2", len(content))
+	}
+	if content[0].Image == "" || content[0].Image[:22] != "data:image/png;base64," {
+		t.Fatalf("unexpected image data URL: %q", content[0].Image)
+	}
+	if content[1].Text != "replace the background" {
+		t.Fatalf("prompt = %q, want replace the background", content[1].Text)
+	}
+	if req.Parameters["size"] != "1024*1024" || req.Parameters["negative_prompt"] != "blur" || req.Parameters["watermark"] != false {
+		t.Fatalf("unexpected parameters: %#v", req.Parameters)
+	}
+}
+
 func TestParseAliyunErrorDefaults(t *testing.T) {
 	var resp fasthttp.Response
 	resp.SetStatusCode(fasthttp.StatusTooManyRequests)

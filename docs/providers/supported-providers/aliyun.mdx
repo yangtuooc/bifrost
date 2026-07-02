@@ -1,6 +1,6 @@
 ---
 title: "Alibaba Cloud"
-description: "Alibaba Cloud Model Studio / DashScope provider guide for chat, responses, embeddings, image generation, files, batch, streaming, and configuration"
+description: "Alibaba Cloud Model Studio / DashScope provider guide for text completions, chat, responses, embeddings, image generation, image editing, files, batch, streaming, and configuration"
 icon: "cloud"
 ---
 
@@ -25,14 +25,15 @@ https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
 | Operation | Bifrost support | Streaming | Upstream endpoint | Notes |
 |-----------|-----------------|-----------|-------------------|-------|
 | List Models | ✅ | - | `/models` | OpenAI-compatible model list format. |
+| Text Completions | ✅ | ✅ | `/completions` | Uses Alibaba Cloud's OpenAI-compatible Completions API for models that expose classic text completion, such as Qwen Coder completion models. |
 | Chat Completions | ✅ | ✅ | `/chat/completions` | Uses Alibaba Cloud's OpenAI-compatible Chat API. |
 | Responses API | ✅ | ✅ | `/responses` | Uses Alibaba Cloud's OpenAI-compatible Responses API, not a Chat fallback. |
 | Embeddings | ✅ | - | `/embeddings` | Uses OpenAI-compatible embedding request and response shape. |
 | Image Generation | ✅ | ❌ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses the Qwen-Image synchronous API. Bifrost converts `1024x1024` style sizes to Alibaba Cloud's `1024*1024` format. |
+| Image Edit | ✅ | ❌ | `/api/v1/services/aigc/multimodal-generation/generation` | Uses Qwen-Image-Edit through Alibaba Cloud's native multimodal generation API. Bifrost sends input images as Base64 data URLs. |
 | Files | ✅ | - | `/files` | Uses Alibaba Cloud's OpenAI-compatible File API for upload, list, retrieve, delete, and content download. |
 | Batch | ✅ | - | `/batches` | Uses Alibaba Cloud's OpenAI-compatible Batch File API. Inline `requests` are converted to JSONL and uploaded as a batch file. |
-| Text Completions | ❌ | ❌ | - | Not enabled because Alibaba Cloud documents Chat/Responses compatibility for current Qwen model access. |
-| Image Edit / Variation | ❌ | ❌ | - | Qwen image edit uses a separate provider-specific API and is not mapped in this provider yet. |
+| Image Variation | ❌ | ❌ | - | Not documented as a distinct Qwen image variation API compatible with Bifrost's variation abstraction. |
 | Speech / Transcription | ❌ | ❌ | - | Qwen-Audio is documented as not supporting the OpenAI-compatible protocol; audio support requires a provider-specific implementation. |
 | Count Tokens | ❌ | - | - | No Bifrost mapping is enabled for this provider. |
 | Video | ❌ | - | - | Native video APIs are not OpenAI wire-compatible with Bifrost's current video abstraction. |
@@ -106,6 +107,19 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   }'
 ```
 
+## Text Completions
+
+Use Alibaba Cloud completion models through Bifrost's unified text completion endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "aliyun/qwen-coder-turbo",
+    "prompt": "Write a Go function that returns true for even integers."
+  }'
+```
+
 ## Responses API
 
 Use the same Bifrost Responses endpoint with an `aliyun/<model>` model string:
@@ -147,6 +161,20 @@ curl -X POST http://localhost:8080/v1/images/generations \
 ```
 
 Alibaba Cloud's Qwen-Image API returns temporary image URLs. Bifrost maps those URLs into the standard `data[].url` field. `response_format=b64_json` is not produced by the upstream Qwen-Image synchronous API.
+
+## Image Edit
+
+Use Qwen-Image-Edit models through Bifrost's unified image edit endpoint:
+
+```bash
+curl -X POST http://localhost:8080/v1/images/edits \
+  -F 'model=aliyun/qwen-image-edit' \
+  -F 'prompt=Replace the background with a clean studio setting' \
+  -F 'image=@input.png' \
+  -F 'size=1024x1024'
+```
+
+Bifrost converts uploaded image bytes into Base64 data URLs for Alibaba Cloud's native multimodal generation API and maps returned image URLs into the standard `data[].url` field.
 
 ## Files
 
@@ -198,8 +226,10 @@ Unsupported operations return Bifrost's standard `unsupported_operation` error. 
 Official references:
 
 - [Alibaba Cloud Model Studio OpenAI-compatible Chat](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope)
+- [Alibaba Cloud Model Studio OpenAI-compatible Completions API](https://help.aliyun.com/zh/model-studio/completions)
 - [Alibaba Cloud Model Studio OpenAI-compatible Responses API](https://help.aliyun.com/zh/model-studio/compatibility-with-openai-responses-api)
 - [Alibaba Cloud Model Studio OpenAI-compatible embeddings](https://help.aliyun.com/zh/model-studio/embedding-interfaces-compatible-with-openai)
 - [Alibaba Cloud Model Studio OpenAI-compatible files](https://help.aliyun.com/zh/model-studio/openai-file-interface)
 - [Alibaba Cloud Model Studio OpenAI-compatible batch](https://help.aliyun.com/zh/model-studio/batch-interfaces-compatible-with-openai/)
 - [Alibaba Cloud Model Studio Qwen-Image API](https://help.aliyun.com/zh/model-studio/qwen-image-api)
+- [Alibaba Cloud Model Studio Qwen-Image-Edit API](https://help.aliyun.com/zh/model-studio/qwen-image-edit-api)

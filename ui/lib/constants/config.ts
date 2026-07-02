@@ -26,7 +26,7 @@ function parseTrialExpiry(dateStr: string | undefined): Date | null {
 // Model placeholders based on provider type
 export const ModelPlaceholders = {
 	default: "e.g. gpt-4, gpt-3.5-turbo. Leave blank for all models.",
-	aliyun: "e.g. qwen-plus, qwen-turbo, qwen-max",
+	aliyun: "e.g. qwen-plus, qwen-coder-turbo, qwen-max",
 	anthropic: "e.g. claude-3-haiku, claude-2.1",
 	azure: "e.g. gpt-4, gpt-35-turbo (must match alias keys)",
 	bedrock: "e.g. claude-v2, titan-text-express-v1, ai21-j2-mid",
