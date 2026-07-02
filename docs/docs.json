@@ -130,6 +130,7 @@
                 "icon": "bars-progress",
                 "pages": [
                   "providers/supported-providers/overview",
+                  "providers/supported-providers/aliyun",
                   "providers/supported-providers/anthropic",
                   "providers/supported-providers/azure",
                   "providers/supported-providers/bedrock",
@@ -156,6 +157,7 @@
                   "providers/supported-providers/sgl",
                   "providers/supported-providers/vertex",
                   "providers/supported-providers/vllm",
+                  "providers/supported-providers/volcengine",
                   "providers/supported-providers/xai"
                 ]
               },

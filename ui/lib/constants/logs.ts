@@ -1,5 +1,6 @@
 // Known provider names array - centralized definition
 export const KnownProvidersNames = [
+	"aliyun",
 	"anthropic",
 	"azure",
 	"bedrock",
@@ -20,6 +21,7 @@ export const KnownProvidersNames = [
 	"perplexity",
 	"sgl",
 	"vertex",
+	"volcengine",
 	"nebius",
 	"xai",
 	"replicate",
@@ -37,6 +39,7 @@ export const ProviderNames: readonly ProviderName[] = KnownProvidersNames;
 // Built-in providers whose Bifrost implementation supports embedding requests.
 // Custom providers must instead be checked via custom_provider_config.allowed_requests.embedding.
 export const EmbeddingSupportedProviders: readonly ProviderName[] = [
+	"aliyun",
 	"azure",
 	"bedrock",
 	"cohere",
@@ -50,6 +53,7 @@ export const EmbeddingSupportedProviders: readonly ProviderName[] = [
 	"openrouter",
 	"sgl",
 	"vertex",
+	"volcengine",
 	"vllm",
 ] as const;
 
@@ -104,6 +108,7 @@ export const RequestTypes = [
 ] as const;
 
 export const ProviderLabels: Record<ProviderName, string> = {
+	aliyun: "Alibaba Cloud",
 	openai: "OpenAI",
 	anthropic: "Anthropic",
 	azure: "Azure",
@@ -111,6 +116,7 @@ export const ProviderLabels: Record<ProviderName, string> = {
 	bedrock_mantle: "AWS Bedrock Mantle",
 	cohere: "Cohere",
 	vertex: "Vertex AI",
+	volcengine: "Volcengine",
 	mistral: "Mistral AI",
 	ollama: "Ollama",
 	"opencode-go": "OpenCode Go",
