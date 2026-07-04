@@ -2398,6 +2398,7 @@ export const en = {
 				active: "Active",
 				inactive: "Inactive",
 				exhausted: "Exhausted",
+				expired: "Expired",
 			},
 			aria: {
 				actions: "Virtual key actions",
@@ -2502,6 +2503,7 @@ export const en = {
 			},
 			fields: {
 				status: "Status",
+				expires: "Expires",
 				created: "Created",
 				lastUpdated: "Last Updated",
 				assignedTo: "Assigned To",
@@ -2515,6 +2517,7 @@ export const en = {
 				exhausted: "Exhausted",
 				active: "Active",
 				inactive: "Inactive",
+				expired: "Expired",
 			},
 			entities: {
 				team: "Team",
@@ -2580,6 +2583,18 @@ export const en = {
 				managedByProfile:
 					"This virtual key is managed by an access profile. Only the name and description can be modified - providers, budgets, rate limits, and MCP access are controlled by the profile.",
 				teamLocked: "Creating this virtual key under team {{team}}. Team assignment is pre-set - all other fields are editable.",
+			},
+			expiry: {
+				label: "Expiry",
+				expires: "This key expires {{time}}.",
+				neverDescription: "This key never expires.",
+				never: "Never",
+				presets: {
+					thirtyMinutes: "30 min",
+					oneHour: "1 hour",
+					twentyFourHours: "24 hours",
+					sevenDays: "7 days",
+				},
 			},
 			fields: {
 				assignedTo: "Assigned To",
@@ -4969,6 +4984,10 @@ export const en = {
 					chat_completion_stream: "Chat Completion Stream",
 					responses: "Responses",
 					responses_stream: "Responses Stream",
+					responses_retrieve: "Responses Retrieve",
+					responses_delete: "Responses Delete",
+					responses_cancel: "Responses Cancel",
+					responses_input_items: "Responses Input Items",
 					embedding: "Embedding",
 					speech: "Speech",
 					speech_stream: "Speech Stream",

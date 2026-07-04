@@ -91,11 +91,14 @@ function virtualKeysToCSV(vks: VirtualKey[], t: TFunction, accessProfileNames: R
 			(vk.rate_limit?.request_current_usage &&
 				vk.rate_limit?.request_max_limit &&
 				vk.rate_limit.request_current_usage >= vk.rate_limit.request_max_limit);
-		const status = vk.is_active
-			? isExhausted
-				? t("virtualKeys.table.status.exhausted")
-				: t("virtualKeys.table.status.active")
-			: t("virtualKeys.table.status.inactive");
+		const isExpired = !!vk.expires_at && Date.now() >= new Date(vk.expires_at).getTime();
+		const status = !vk.is_active
+			? t("virtualKeys.table.status.inactive")
+			: isExpired
+				? t("virtualKeys.table.status.expired")
+				: isExhausted
+					? t("virtualKeys.table.status.exhausted")
+					: t("virtualKeys.table.status.active");
 		const assignedTo = vk.team
 			? t("virtualKeys.table.export.assignedTeam", { name: vk.team.name })
 			: vk.customer
@@ -873,6 +876,8 @@ export default function VirtualKeysTable({
 							) : (
 								virtualKeys.map((vk) => {
 									const isRevealed = revealedKeys.has(vk.id);
+									const isExpired = !!vk.expires_at && Date.now() >= new Date(vk.expires_at).getTime();
+									const showExpiredBadge = vk.is_active && isExpired;
 
 									return (
 										<TableRow
@@ -927,7 +932,13 @@ export default function VirtualKeysTable({
 												<VKRateLimitCell vk={vk} />
 											</TableCell>
 											<TableCell onClick={(e) => e.stopPropagation()}>
-												<VKActiveSwitch vk={vk} hasUpdateAccess={hasUpdateAccess} onToggle={handleToggleActive} />
+												{showExpiredBadge ? (
+													<Badge variant="destructive" className="text-xs">
+														{t("virtualKeys.table.status.expired")}
+													</Badge>
+												) : (
+													<VKActiveSwitch vk={vk} hasUpdateAccess={hasUpdateAccess} onToggle={handleToggleActive} />
+												)}
 											</TableCell>
 											<TableCell
 												className={`group-hover:bg-muted dark:bg-card dark:group-hover:bg-muted sticky right-0 z-20 bg-white text-right ${PIN_SHADOW_RIGHT}`}

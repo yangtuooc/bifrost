@@ -2381,6 +2381,7 @@ export const zh = {
 				active: "活跃",
 				inactive: "未启用",
 				exhausted: "已耗尽",
+				expired: "已过期",
 			},
 			aria: {
 				actions: "Virtual Key 操作",
@@ -2485,6 +2486,7 @@ export const zh = {
 			},
 			fields: {
 				status: "状态",
+				expires: "过期时间",
 				created: "创建时间",
 				lastUpdated: "最后更新",
 				assignedTo: "分配给",
@@ -2498,6 +2500,7 @@ export const zh = {
 				exhausted: "已耗尽",
 				active: "启用",
 				inactive: "停用",
+				expired: "已过期",
 			},
 			entities: {
 				team: "团队",
@@ -2563,6 +2566,18 @@ export const zh = {
 				managedByProfile:
 					"该 virtual key 由 access profile 管理。只能修改名称和描述；Providers、预算、速率限制和 MCP 访问均由 profile 控制。",
 				teamLocked: "将在团队 {{team}} 下创建该 virtual key。团队分配已预设，其他字段仍可编辑。",
+			},
+			expiry: {
+				label: "过期时间",
+				expires: "此 key 将在 {{time}}过期。",
+				neverDescription: "此 key 永不过期。",
+				never: "永不过期",
+				presets: {
+					thirtyMinutes: "30 分钟",
+					oneHour: "1 小时",
+					twentyFourHours: "24 小时",
+					sevenDays: "7 天",
+				},
 			},
 			fields: {
 				assignedTo: "分配给",
@@ -4906,6 +4921,10 @@ export const zh = {
 					chat_completion_stream: "聊天补全流式",
 					responses: "Responses",
 					responses_stream: "Responses 流式",
+					responses_retrieve: "Responses 检索",
+					responses_delete: "Responses 删除",
+					responses_cancel: "Responses 取消",
+					responses_input_items: "Responses 输入项",
 					embedding: "Embedding",
 					speech: "Speech",
 					speech_stream: "Speech 流式",

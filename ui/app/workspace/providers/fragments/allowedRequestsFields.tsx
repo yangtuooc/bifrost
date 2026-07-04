@@ -71,6 +71,10 @@ const RequestTypes: Array<{ key: RequestType }> = [
 	{ key: "chat_completion_stream" },
 	{ key: "responses" },
 	{ key: "responses_stream" },
+	{ key: "responses_retrieve" },
+	{ key: "responses_delete" },
+	{ key: "responses_cancel" },
+	{ key: "responses_input_items" },
 	{ key: "embedding" },
 	{ key: "speech" },
 	{ key: "speech_stream" },
@@ -83,6 +87,15 @@ const RequestTypes: Array<{ key: RequestType }> = [
 	{ key: "image_variation" },
 	{ key: "count_tokens" },
 ];
+
+// Path overrides replace the default path verbatim; these request paths embed the
+// response ID, so an override can never produce a valid URL for them.
+const PathOverrideUnsupported = new Set<RequestType>([
+	"responses_retrieve",
+	"responses_delete",
+	"responses_cancel",
+	"responses_input_items",
+]);
 
 export function AllowedRequestsFields({
 	control,
@@ -126,7 +139,7 @@ export function AllowedRequestsFields({
 						</div>
 						<div className="flex items-center gap-2">
 							{/* 仅在启用请求类型时展示 endpoint path 覆盖入口。 */}
-							{allowedField.value && !isDisabled && !isPathOverrideDisabled && !disabled && (
+							{allowedField.value && !isDisabled && !isPathOverrideDisabled && !disabled && !PathOverrideUnsupported.has(requestType.key) && (
 								<FormField
 									control={control}
 									name={`${pathOverridesPrefix}.${requestType.key}`}

@@ -98,6 +98,7 @@ export default function VirtualKeyDetailSheet({
 		(displayRateLimit?.request_current_usage &&
 			displayRateLimit?.request_max_limit &&
 			displayRateLimit.request_current_usage >= displayRateLimit.request_max_limit);
+	const isExpired = !!virtualKey.expires_at && Date.now() >= new Date(virtualKey.expires_at).getTime();
 
 	return (
 		<Sheet open onOpenChange={onClose}>
@@ -141,15 +142,27 @@ export default function VirtualKeyDetailSheet({
 							<div className="grid grid-cols-3 items-center gap-4">
 								<span className="text-muted-foreground text-sm">{t("virtualKeys.details.fields.status")}</span>
 								<div className="col-span-2">
-									<Badge variant={virtualKey.is_active ? (isExhausted ? "destructive" : "default") : "secondary"}>
-										{virtualKey.is_active
-											? isExhausted
-												? t("virtualKeys.details.status.exhausted")
-												: t("virtualKeys.details.status.active")
-											: t("virtualKeys.details.status.inactive")}
+									<Badge variant={!virtualKey.is_active ? "secondary" : isExpired || isExhausted ? "destructive" : "default"}>
+										{!virtualKey.is_active
+											? t("virtualKeys.details.status.inactive")
+											: isExpired
+												? t("virtualKeys.details.status.expired")
+												: isExhausted
+													? t("virtualKeys.details.status.exhausted")
+													: t("virtualKeys.details.status.active")}
 									</Badge>
 								</div>
 							</div>
+
+							{virtualKey.expires_at && (
+								<div className="grid grid-cols-3 items-center gap-4">
+									<span className="text-muted-foreground text-sm">{t("virtualKeys.details.fields.expires")}</span>
+									<div className="col-span-2 text-sm">
+										{formatRelativeTime(new Date(virtualKey.expires_at))}
+										<span className="text-muted-foreground ml-1 text-xs">({new Date(virtualKey.expires_at).toLocaleString()})</span>
+									</div>
+								</div>
+							)}
 
 							<div className="grid grid-cols-3 items-center gap-4">
 								<span className="text-muted-foreground text-sm">{t("virtualKeys.details.fields.created")}</span>
