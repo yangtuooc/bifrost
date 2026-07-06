@@ -172,6 +172,10 @@ function OverviewTabImpl({
 								<span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS.error }} />
 								<span className="text-muted-foreground">{t("dashboard.metrics.error")}</span>
 							</span>
+							<span className="flex items-center gap-1">
+								<span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_COLORS.cancelled }} />
+								<span className="text-muted-foreground">Cancelled</span>
+							</span>
 						</div>
 					}
 					controls={
@@ -362,6 +366,10 @@ function OverviewTabImpl({
 									<span className="flex items-center gap-1">
 										<span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: CHART_COLORS.error }} />
 										<span className="text-muted-foreground">{t("dashboard.metrics.error")}</span>
+									</span>
+									<span className="flex items-center gap-1">
+										<span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: CHART_COLORS.cancelled }} />
+										<span className="text-muted-foreground">Cancelled</span>
 									</span>
 								</>
 							)}

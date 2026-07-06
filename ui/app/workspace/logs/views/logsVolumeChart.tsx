@@ -164,6 +164,13 @@ function CustomTooltip({ active, payload, labels }: CustomTooltipProps) {
 					</span>
 					<span className="font-medium text-red-600 dark:text-red-400">{data.error.toLocaleString()}</span>
 				</div>
+				<div className="flex items-center justify-between gap-4">
+					<span className="flex items-center gap-1.5">
+						<span className="h-2 w-2 rounded-full bg-zinc-400" />
+						<span className="text-zinc-600 dark:text-zinc-400">Cancelled</span>
+					</span>
+					<span className="font-medium text-zinc-600 dark:text-zinc-400">{(data.cancelled ?? 0).toLocaleString()}</span>
+				</div>
 			</div>
 		</div>
 	);
@@ -225,6 +232,7 @@ export function LogsVolumeChart({
 			// If too many buckets, just return the original data without filling
 			const result = (data.buckets || []).map((bucket, index) => ({
 				...bucket,
+				cancelled: bucket.cancelled ?? 0,
 				index,
 				formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 			}));
@@ -236,6 +244,7 @@ export function LogsVolumeChart({
 					count: 0,
 					success: 0,
 					error: 0,
+					cancelled: 0,
 					index: 1,
 					formattedTime: formatTimestamp(nextTimestamp, data.bucket_size_seconds),
 				});
@@ -252,6 +261,7 @@ export function LogsVolumeChart({
 				count: 0,
 				success: 0,
 				error: 0,
+				cancelled: 0,
 				index: idx,
 				formattedTime: formatTimestamp(timestamp, data.bucket_size_seconds),
 			});
@@ -267,6 +277,7 @@ export function LogsVolumeChart({
 			if (bucketIndex >= 0 && bucketIndex < filledBuckets.length) {
 				filledBuckets[bucketIndex] = {
 					...bucket,
+					cancelled: bucket.cancelled ?? 0,
 					index: bucketIndex,
 					formattedTime: formatTimestamp(bucket.timestamp, data.bucket_size_seconds),
 				};
@@ -281,6 +292,7 @@ export function LogsVolumeChart({
 				count: 0,
 				success: 0,
 				error: 0,
+				cancelled: 0,
 				index: 1,
 				formattedTime: formatTimestamp(nextTimestamp, data.bucket_size_seconds),
 			});
@@ -381,6 +393,10 @@ export function LogsVolumeChart({
 									<span className="h-2 w-2 rounded-full bg-red-500" />
 									<span className="text-muted-foreground">{t("logs.volume.error")}</span>
 								</span>
+								<span className="flex items-center gap-1.5">
+									<span className="h-2 w-2 rounded-full bg-zinc-400" />
+									<span className="text-muted-foreground">Cancelled</span>
+								</span>
 							</div>
 						)}
 						{isZoomed && onResetZoom && (
@@ -459,6 +475,16 @@ export function LogsVolumeChart({
 											fill="#ef4444"
 											barSize={30}
 											fillOpacity={0.7}
+											radius={[0, 0, 0, 0]}
+											cursor="pointer"
+											onClick={(data) => handleBarClick(data?.payload as LogVolumeDataPoint | undefined)}
+										/>
+										<Bar
+											dataKey="cancelled"
+											stackId="requests"
+											fill="#a1a1aa"
+											barSize={30}
+											fillOpacity={0.75}
 											radius={[2, 2, 0, 0]}
 											cursor="pointer"
 											onClick={(data) => handleBarClick(data?.payload as LogVolumeDataPoint | undefined)}
