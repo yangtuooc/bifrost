@@ -989,6 +989,7 @@ export const en = {
 				filterThisSession: "Filter this session",
 				filterByUser: "Filter by user",
 				showAllMessages: "Show all messages",
+				showOriginalValues: "Show original values",
 				showMoreLines: "Show {{count}} more lines",
 				download: "Download",
 				openFile: "Open file",

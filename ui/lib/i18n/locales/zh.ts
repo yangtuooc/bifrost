@@ -983,6 +983,7 @@ export const zh = {
 				filterThisSession: "筛选此会话",
 				filterByUser: "按用户筛选",
 				showAllMessages: "显示全部消息",
+				showOriginalValues: "显示原始值",
 				showMoreLines: "再显示 {{count}} 行",
 				download: "下载",
 				openFile: "打开文件",

@@ -18,6 +18,7 @@ interface LogDetailSheetProps {
 	onNavigate?: (direction: "prev" | "next") => void;
 	hasPrev?: boolean;
 	hasNext?: boolean;
+	canReveal?: boolean;
 	onViewSession?: (sessionId: string, logId: string) => void;
 	onFilterByParentRequestId?: (parentRequestId: string) => void;
 }
@@ -30,6 +31,7 @@ export function LogDetailSheet({
 	onNavigate,
 	hasPrev = false,
 	hasNext = false,
+	canReveal = false,
 	onViewSession,
 	onFilterByParentRequestId,
 }: LogDetailSheetProps) {
@@ -84,6 +86,7 @@ export function LogDetailSheet({
 						log={displayLog}
 						resolvedSelectedPromptName={resolvedSelectedPromptName}
 						handleDelete={handleDelete}
+						canReveal={canReveal}
 						onClose={() => onOpenChange(false)}
 						onFilterByParentRequestId={onFilterByParentRequestId}
 						headerAction={
